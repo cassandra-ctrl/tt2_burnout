@@ -72,6 +72,7 @@ app.get("health", (req, res) => {
 //RUTAS
 app.use("/api/test", require("./routes/test.routes"));
 app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/usuarios", require("./routes/usuarios.routes"));
 
 //RUTA NO ENCONTRADA
 app.use((req, res) => {
