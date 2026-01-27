@@ -1,4 +1,5 @@
 //RUTAS de gestion de usuarios
+//CRUD
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
