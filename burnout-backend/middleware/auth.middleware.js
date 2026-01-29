@@ -60,7 +60,7 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
-    console.error("❌ Error en autenticación:", error);
+    console.error("Error en autenticación:", error);
     res.status(500).json({
       error: "Error de autenticación",
       message: "Error al verificar token",

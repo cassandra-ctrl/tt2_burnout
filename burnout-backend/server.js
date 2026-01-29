@@ -74,6 +74,7 @@ app.use("/api/test", require("./routes/test.routes"));
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/usuarios", require("./routes/usuarios.routes"));
 app.use("/api/modulos", require("./routes/modulos.routes"));
+app.use("/api/progreso", require("./routes/progreso.routes"));
 
 //RUTA NO ENCONTRADA
 app.use((req, res) => {
