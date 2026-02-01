@@ -76,7 +76,8 @@ app.use("/api/usuarios", require("./routes/usuarios.routes"));
 app.use("/api/modulos", require("./routes/modulos.routes"));
 app.use("/api/progreso", require("./routes/progreso.routes"));
 app.use("/api/test-olbi", require("./routes/test-olbi.routes"));
-
+app.use("/api/recuperacion", require("./routes/recuperacion.routes"));
+app.use("/api/documentos", require("./routes/documentos-legales.routes"));
 //RUTA NO ENCONTRADA
 app.use((req, res) => {
   res.status(404).json({
