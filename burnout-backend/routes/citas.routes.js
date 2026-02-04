@@ -253,7 +253,7 @@ router.get("/agenda", authenticate.psicologo, async (req, res) => {
             c.estado,
             c.observaciones,
             cat.tipo_cita,
-            p.id_paciente
+            p.id_paciente,
             CONCAT(up.nombre, ' ',up.paterno) as paciente_nombre, up.correo as paciente_correo
         FROM citas c
         JOIN cat_cita cat ON c.id_categoria = cat.id_categoria
@@ -370,7 +370,7 @@ router.post(
   "/",
   authenticate.psicologo,
   [
-    body("id__paciente").isInt().withMessage("ID de paciente inválido"),
+    body("id_paciente").isInt().withMessage("ID de paciente inválido"),
     body("fecha_cita")
       .isDate()
       .withMessage("Fecha incorrecta, usar formado YYYY-MM-DD"),
@@ -468,7 +468,7 @@ router.post(
 
       const result = await db.query(
         `
-        INSERT INTO citas (id_psicologo, id_paciente, fecha_cita,hora_cita,id_categoria, observaciones, estado) VALUES (?,?,?,?,?,?,'programada'),
+        INSERT INTO citas (id_psicologo, id_paciente, fecha_cita,hora_cita,id_categoria, observaciones, estado) VALUES (?,?,?,?,?,?,'programada')
         `,
         [
           psicologo.id_psicologo,
@@ -509,12 +509,12 @@ router.put(
   "/:id",
   authenticate.psicologo,
   [
-    body("fecha_cita").optional().isDate.withMessage("Fecha inválida"),
+    body("fecha_cita").optional().isDate().withMessage("Fecha inválida"),
     body("hora_cita")
       .optional()
       .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
       .withMessage("Hora inválida"),
-    body("id_categoria").optional.isInt().withMessage("Categoria inválida"),
+    body("id_categoria").optional().isInt().withMessage("Categoria inválida"),
     body("observaciones").optional().trim(),
   ],
   async (req, res) => {
@@ -600,6 +600,280 @@ router.put(
         updates.push("id_categoria = ?");
         params.push(id_categoria);
       }
-    } catch {}
+
+      if (observaciones !== undefined) {
+        updates.push("observaciones = ?");
+        params.push(observaciones);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({
+          error: "No hay cambios",
+          message: "No se proporcionaron datos para actualizar cita",
+        });
+      }
+
+      //Ejecutamos la actualizacion de los elementos modificados
+      params.push(id);
+      await db.query(
+        `UPDATE citas SET ${updates.join(", ")}  WHERE id_cita = ?`,
+        params,
+      );
+
+      res.json({
+        message: "Cita actualizada con éxito",
+      });
+    } catch {
+      error;
+    }
+    {
+      console.error("Error actualizando cita:", error);
+      res.status(500).json({
+        error: "Error actualizando cita",
+        message: error.message,
+      });
+    }
   },
 );
+
+// PUT /api/citas/:id/cancelar
+// CANCELAR CITA (Psicologo)
+
+router.put("/:id/cancelar", authenticate.psicologo, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    //Obtenemos el psicologo por el id
+    const psicologo = await db.queryOne(
+      "SELECT id_psicologo FROM psicologo WHERE id_usuario =?",
+      [req.user.id],
+    );
+
+    //de no encontrar el psicologo en la bd
+    if (!psicologo) {
+      return res.status(404).json({ error: "Psicólogo no encontrado" });
+    }
+
+    //Primero verificamos que la cita exista para poner cancelarla posteriormente
+    const cita = await db.queryOne(
+      "SELECT id_cita, id_psicologo, estado FROM citas WHERE id_cita =?",
+      [id],
+    );
+
+    if (!cita) {
+      return res.status(404).json({
+        error: "Cita no encontrada",
+      });
+    }
+
+    if (cita.id_psicologo !== psicologo.id_psicologo) {
+      return res.status(403).json({
+        error: "No tienens permiso para cancelar citas",
+      });
+    }
+
+    if (cita.estado !== "Programada") {
+      return res.status(400).json({
+        error: "No se pueden cancelar citas pasadas",
+        message: "Solo se pueden cancelar citas programadas",
+      });
+    }
+
+    //si todas las validaciones son correctas, cancelamos la cita
+    await db.query("UPDATE citas SET estado = 'cancelada' WHERE id_cita =?", [
+      id,
+    ]);
+
+    res.json({
+      message: "Cita cancelada exitosamente",
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Error cancelando cita",
+      message: error.message,
+    });
+  }
+});
+
+//PUT /api/citas/:id/completar
+//Marcar cita como completada
+router.put("/:id/completar", authenticate.required, async (req, res) => {
+  try {
+    //obtenemos el id
+    const { id } = req.params;
+    //agregamos algunas observaciones de la sesion
+    const { observaciones } = req.body;
+
+    const psicologo = await db.queryOne(
+      "SELECT id_psicologo FROM psicologo WHERE id_usuario = ?",
+      [req.user.id],
+    );
+
+    if (!psicologo) {
+      return res.status(404).json({ error: "Psicólogo no encontrado" });
+    }
+
+    const cita = await db.queryOne(
+      "SELECT id_cita, id_psicologo, estado FROM citas WHERE id_cita=?",
+      [id],
+    );
+
+    if (!cita) {
+      return res.status(404).json({ error: "Cita no encontrada" });
+    }
+
+    //verificamos que la cita corresponda al psicologo
+    if (cita.id_psicologo !== psicologo.id_psicologo) {
+      return res.status(403).json({
+        error:
+          "No tienes permiso para modificar el estado de esta cita a completada",
+      });
+    }
+
+    //verificamos el estado, no tiene que ser una cita pasada
+    if (cita.estado !== "programada") {
+      return res.status(400).json({
+        error: "No se puede marcar como 'Completada'",
+        message: "Solo se pueden completar citas en estado 'programadas'",
+      });
+    }
+
+    //Si todas las validaciones son correctas, marcar como completada la cita
+    if (observaciones) {
+      await db.query(
+        "UPDATE citas SET estado = 'completada', observaciones = ? WHERE id_cita = ?",
+        [observaciones, id],
+      );
+    }
+
+    res.json({
+      message: "Cita marcada como completada",
+    });
+  } catch (error) {
+    console.error("Error completando cita:", error);
+    res.status(500).json({
+      error: "Error completando cita",
+      message: error.message,
+    });
+  }
+});
+
+//PUT /api/citas/:id/no-asistio
+//Marcar que el paciente no asistio a la cita
+
+router.put("/:id/no-asistio", authenticate.psicologo, async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Obtener el psicólogo
+    const psicologo = await db.queryOne(
+      "SELECT id_psicologo FROM psicologo WHERE id_usuario = ?",
+      [req.user.id],
+    );
+
+    if (!psicologo) {
+      return res.status(404).json({ error: "Psicólogo no encontrado" });
+    }
+    const cita = await db.queryOne(
+      "SELECT id_cita, id_psicolog, estado FROM citas WHERE id_cita=?",
+      [id],
+    );
+
+    if (!cita) {
+      return res.status(404).json({ error: "Cita no encontrada" });
+    }
+
+    //verificamos que la cita corresponda al psicologo
+    if (cita.id_psicologo !== psicologo.id_psicologo) {
+      return res.status(403).json({
+        error:
+          "No tienes permiso para modificar el estado de esta cita a completada",
+      });
+    }
+
+    //verificamos el estado, no tiene que ser una cita pasada
+    if (cita.estado !== "programada") {
+      return res.status(400).json({
+        error: "No se puede marcar como 'Completada'",
+        message: "Solo se pueden completar citas en estado 'programadas'",
+      });
+    }
+
+    //Marcar que no asistio
+    await db.query("UPDATE citas SET estado ='no_asistio' WHERE id_cita =?", [
+      id,
+    ]);
+    res.json({
+      message: "Cita marcada como 'no asistió'",
+    });
+  } catch (error) {
+    console.error("Error actualizando cita:", error);
+    res.status(500).json({
+      error: "Error actualizando cita",
+      message: error.message,
+    });
+  }
+});
+
+//GET /api/citas/paciente/:pacienteId
+//Obtener todas las citas de un paciente en especial
+//Uso: Historial de citas
+router.get(
+  "/paciente/:pacienteId",
+  authenticate.required,
+  noAdmin,
+  async (req, res) => {
+    try {
+      if (req.user.rol === "paciente") {
+        ("SELECT id_paciente FROM paciente WHERE id_usuario =?", [req.user.id]);
+      }
+
+      //Para que el paciente no vea citas que no sean las suyas
+      if (!paciente || paciente.id_paciente !== parseInt(pacienteId)) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver estas citas",
+        });
+      }
+
+      //Obtener las citas del paciente
+      (`
+      SELECT
+        c.id_cita,
+        c.fecha_cita,
+        c.hora_cita,
+        c.estado,
+        c.observaciones,
+        cat.tipo_cita,
+        CONCAT(ups.nombre, ' ',ups.paterno) as psicologo_nombre
+      FROM citas c
+      JOIN cat_cita cat ON c.id_categoria = cat.id_categoria
+      JOIN psicologo ps ON c.id_psicologo = ps.id_psicologo
+      JOIN usuario ups ON ps.id_usuario = ups.id_usuario
+      WHERE c.id_paciente =?
+      ORDER BY c.fecha_cita DESC, c.hora_cita DESC
+      `,
+        [pacienteId]);
+
+      //SEPARAMOS LAS CITAS POR EL ESTADO
+      const resumen = {
+        programas: citas.filter((c) => c.estado === "programada").length,
+        completadas: citas.filter((c) => c.estado === "completada").length,
+        canceladas: citas.filter((c) => c.estado === "cancelada").length,
+        no_asistio: citas.filter((c) => c.estado === "no_asistio").length,
+      };
+
+      res.json({
+        total: citas.length,
+        resumen,
+        citas,
+      });
+    } catch (error) {
+      console.error("Error obteniendo citas del paciente:", error);
+      res.status(500).json({
+        error: "Error obteniendo citas",
+        message: error.message,
+      });
+    }
+  },
+);
+
+module.exports = router;
