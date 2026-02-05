@@ -1,0 +1,137 @@
+/* Estilos para RecuperarContrasena */
+.recuperar-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.recuperar-card {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 500px;
+}
+
+.recuperar-card h1 {
+  text-align: center;
+  color: #667eea;
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+
+/* Indicador de pasos */
+.pasos-indicador {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+
+.paso {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.paso.activo {
+  background: #667eea;
+  color: white;
+}
+
+.linea {
+  width: 60px;
+  height: 3px;
+  background: #e0e0e0;
+  transition: all 0.3s;
+}
+
+.linea.activo {
+  background: #667eea;
+}
+
+/* Instrucciones */
+.instrucciones {
+  text-align: center;
+  color: #666;
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+
+.instrucciones strong {
+  color: #667eea;
+}
+
+/* Input de código */
+.codigo-input {
+  text-align: center;
+  font-size: 24px;
+  letter-spacing: 8px;
+  font-weight: 600;
+}
+
+/* Mensajes */
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #c3e6cb;
+}
+
+/* Footer del formulario */
+.form-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #5568d3;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .recuperar-card {
+    padding: 30px 20px;
+  }
+
+  .pasos-indicador {
+    padding: 0 10px;
+  }
+
+  .linea {
+    width: 40px;
+  }
+
+  .paso {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+}
