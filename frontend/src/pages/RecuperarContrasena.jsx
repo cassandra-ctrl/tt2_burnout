@@ -84,10 +84,21 @@ const RecuperarContrasena = () => {
       
       // Redirigir al login después de 2 segundos
       setTimeout(() => {
-        navigate('/login');
+        navigate('/');
       }, 2000);
     } catch (err) {
-      setError(err.message || 'Error al cambiar contraseña');
+        let errorMessage = 'Error al cambiar contraseña';
+  
+        if (err.errors && err.errors.length > 0) {
+          // Toma el mensaje del array de errores de validación
+          errorMessage = err.errors[0].msg;
+        } else if (err.message) {
+          errorMessage = err.message;
+        } else if (err.error) {
+          errorMessage = err.error;
+        }
+  
+  setError(errorMessage);
     } finally {
       setLoading(false);
     }

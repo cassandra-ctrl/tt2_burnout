@@ -1,4 +1,4 @@
-// Componente de Login
+// Login - Versión con imagen (más fácil de personalizar)
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +21,7 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError(''); // Limpiar error al escribir
+    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -31,7 +31,7 @@ const Login = () => {
 
     try {
       await login(formData.correo, formData.contrasena);
-      navigate('/dashboard'); // Redirigir al dashboard después del login
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {
@@ -40,63 +40,78 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1>Burnout App</h1>
-        <h2>Iniciar Sesión</h2>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="correo">Correo Electrónico</label>
-            <input
-              type="email"
-              id="correo"
-              name="correo"
-              value={formData.correo}
-              onChange={handleChange}
-              required
-              placeholder="tu@correo.com"
-            />
-          </div>
+    <div className="login-simple-container">
+      <div className="wave-top-simple"></div>
+      
+      <div className="login-simple-content">
+        <div className="login-simple-header">
+          <h1>Bienvenido!</h1>
+          <p>Más calma. Menos agotamiento</p>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="contrasena">Contraseña</label>
-            <input
-              type="password"
-              id="contrasena"
-              name="contrasena"
-              value={formData.contrasena}
-              onChange={handleChange}
-              required
-              placeholder="••••••••"
-            />
-          </div>
+        {/* Aquí irá tu imagen del panda */}
+        <div className="panda-image-container">
+          {/* Opción 1: Emoji de panda (temporal) */}
+          <div className="panda-emoji">🐼</div>
+          
+          {/* Opción 2: Cuando tengas la imagen, descomenta esto:
+          <img 
+            src="/panda-meditation.png" 
+            alt="Panda meditando" 
+            className="panda-image"
+          />
+          */}
+        </div>
 
           {error && (
-            <div className="error-message">
+            <div className="error-message-simple">
               {error}
             </div>
           )}
 
+
+        <form onSubmit={handleSubmit} className="login-simple-form">
+          <div className="input-group-simple">
+            <span className="input-icon-simple">@</span>
+            <input
+              type="email"
+              name="correo"
+              value={formData.correo}
+              onChange={handleChange}
+              required
+              placeholder="Correo"
+            />
+          </div>
+
+          <div className="input-group-simple">
+            <span className="input-icon-simple">🔒</span>
+            <input
+              type="password"
+              name="contrasena"
+              value={formData.contrasena}
+              onChange={handleChange}
+              required
+              placeholder="••••••"
+            />
+          </div>
+
+          <div className="recuperar-link-simple">
+            <a href="/recuperar-contrasena">Recuperar contraseña</a>
+          </div>
+
+
+
           <button 
             type="submit" 
-            className="btn-primary"
+            className="btn-entrar-simple"
             disabled={loading}
           >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p>
-            ¿No tienes cuenta?{' '}
-            <a href="/register">Regístrate aquí</a>
-          </p>
-          <p>
-            <a href="/recuperar-contrasena">¿Olvidaste tu contraseña?</a>
-          </p>
-        </div>
       </div>
+
+      <div className="wave-bottom-simple"></div>
     </div>
   );
 };
