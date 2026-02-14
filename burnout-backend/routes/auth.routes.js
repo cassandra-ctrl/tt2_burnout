@@ -159,7 +159,7 @@ router.post(
       //Hash de la contraseña (10 rondas de bcrypt)
       const hashedPassword = await bcrypt.hash(contrasena, 10);
 
-      //Transacción: Creamos el usuario y el paciente
+      //Transacción: Creamos el usuario, el paciente y asignamos al psicólogo
       const result = await db.transaction(async (connection) => {
         //Insertar el usuario
         const [userResult] = await connection.query(
@@ -182,9 +182,25 @@ router.post(
           [userId, matricula],
         );
 
+        const pacienteId = pacienteResult.insertId;
+
+        // ASIGNACIÓN AUTOMÁTICA AL PSICÓLOGO
+
+        const [psicologoRows] = await connection.query(
+          "SELECT id_psicologo FROM psicologo LIMIT 1",
+        );
+
+        if (psicologoRows.length > 0) {
+          await connection.query(
+            `INSERT INTO expediente (id_paciente, id_psicologo, fecha_apertura, estado)
+       VALUES (?, ?, NOW(), 'activo')`,
+            [pacienteId, psicologoRows[0].id_psicologo],
+          );
+        }
+
         return {
           userId,
-          pacienteId: pacienteResult.insertId,
+          pacienteId,
         };
       });
 
