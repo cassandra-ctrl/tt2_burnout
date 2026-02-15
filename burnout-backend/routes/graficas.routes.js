@@ -194,7 +194,7 @@ router.get(
     try {
       const { id } = req.params;
       // Verificar permisos
-    
+
       if (req.user.rol === "psicologo") {
         const idPsicologo = await obtenerIdPsicologo(req.user.id);
         if (!idPsicologo) {
@@ -219,7 +219,6 @@ router.get(
         return res.status(403).json({ error: "Acceso denegado" });
       }
 
- 
       // Obtener tests del paciente
 
       const tests = await db.query(
@@ -240,7 +239,7 @@ router.get(
       const testFinal = tests.find((t) => t.tipo_prueba === "final");
 
       // Calcular interpretación si hay ambos tests
-  
+
       let interpretacion = null;
       let mejoria = null;
 
@@ -368,11 +367,10 @@ router.get(
   },
 );
 
-/ GET /api/graficas/burnout-general
+// GET /api/graficas/burnout-general
 
 // GRÁFICA 3: Nivel de burnout general de todos los pacientes
 // Acceso: Solo Psicólogo
-
 
 router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
   try {
@@ -398,7 +396,7 @@ router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
          )
        WHERE e.id_psicologo = ? AND e.estado = 'activo'
        GROUP BY COALESCE(pb.nivel_burnout, 'sin_evaluar')`,
-      [idPsicologo]
+      [idPsicologo],
     );
 
     // Organizar datos
@@ -413,8 +411,10 @@ router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
       niveles[d.nivel] = d.cantidad;
     });
 
-    const totalPacientes = Object.values(niveles).reduce((sum, val) => sum + val, 0);
-
+    const totalPacientes = Object.values(niveles).reduce(
+      (sum, val) => sum + val,
+      0,
+    );
 
     // Obtener lista de pacientes por nivel (para detalle)
     const pacientesPorNivel = await db.query(
@@ -442,7 +442,7 @@ router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
            WHEN 'bajo' THEN 3
            ELSE 4
          END`,
-      [idPsicologo]
+      [idPsicologo],
     );
 
     // Respuesta con datos para la gráfica
@@ -451,19 +451,31 @@ router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
       distribucion: {
         bajo: {
           cantidad: niveles.bajo,
-          porcentaje: totalPacientes > 0 ? Math.round((niveles.bajo / totalPacientes) * 100) : 0,
+          porcentaje:
+            totalPacientes > 0
+              ? Math.round((niveles.bajo / totalPacientes) * 100)
+              : 0,
         },
         medio: {
           cantidad: niveles.medio,
-          porcentaje: totalPacientes > 0 ? Math.round((niveles.medio / totalPacientes) * 100) : 0,
+          porcentaje:
+            totalPacientes > 0
+              ? Math.round((niveles.medio / totalPacientes) * 100)
+              : 0,
         },
         alto: {
           cantidad: niveles.alto,
-          porcentaje: totalPacientes > 0 ? Math.round((niveles.alto / totalPacientes) * 100) : 0,
+          porcentaje:
+            totalPacientes > 0
+              ? Math.round((niveles.alto / totalPacientes) * 100)
+              : 0,
         },
         sin_evaluar: {
           cantidad: niveles.sin_evaluar,
-          porcentaje: totalPacientes > 0 ? Math.round((niveles.sin_evaluar / totalPacientes) * 100) : 0,
+          porcentaje:
+            totalPacientes > 0
+              ? Math.round((niveles.sin_evaluar / totalPacientes) * 100)
+              : 0,
         },
       },
       // Datos listos para Chart.js (gráfica de pastel/dona)
@@ -473,7 +485,12 @@ router.get("/burnout-general", authenticate.psicologo, async (req, res) => {
         labels: ["Bajo", "Medio", "Alto", "Sin evaluar"],
         datasets: [
           {
-            data: [niveles.bajo, niveles.medio, niveles.alto, niveles.sin_evaluar],
+            data: [
+              niveles.bajo,
+              niveles.medio,
+              niveles.alto,
+              niveles.sin_evaluar,
+            ],
             backgroundColor: ["#4CAF50", "#FF9800", "#f44336", "#9E9E9E"],
             borderWidth: 1,
           },
