@@ -47,6 +47,12 @@ const AgregarPsicologo = () => {
       return;
     }
 
+    if (formData.cedula_profesional.length > 20) {
+      setError('La cédula profesional debe tener máximo 20 caracteres');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Preparar datos para enviar
       const userData = {
@@ -167,8 +173,10 @@ const AgregarPsicologo = () => {
                   value={formData.cedula_profesional}
                   onChange={handleChange}
                   required
+                  maxLength={20}
                   placeholder="12345678"
                 />
+                <span className="field-hint">Máximo 20 caracteres</span>
               </div>
             </div>
 

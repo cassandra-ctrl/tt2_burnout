@@ -22,10 +22,22 @@ const AgregarPaciente = () => {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // Si es el campo de matrícula, solo permitir números
+    if (name === 'matricula') {
+      const soloNumeros = value.replace(/[^0-9]/g, '');
+      setFormData({
+        ...formData,
+        [name]: soloNumeros,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
+    
     setError('');
   };
 
@@ -43,6 +55,18 @@ const AgregarPaciente = () => {
 
     if (formData.contrasena.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.matricula.length > 10) {
+      setError('La matrícula debe tener máximo 10 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d+$/.test(formData.matricula)) {
+      setError('La matrícula debe contener solo números');
       setLoading(false);
       return;
     }
@@ -162,13 +186,17 @@ const AgregarPaciente = () => {
                 <label htmlFor="matricula">Matrícula *</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="matricula"
                   name="matricula"
                   value={formData.matricula}
                   onChange={handleChange}
                   required
+                  maxLength={10}
                   placeholder="2021123456"
                 />
+                <span className="field-hint">Solo números, máximo 10 dígitos</span>
               </div>
             </div>
 
