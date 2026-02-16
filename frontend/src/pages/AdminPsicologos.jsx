@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import ConfirmModal from '../components/ConfirmModal';
 import usuariosService from '../services/usuariosService';
 import './AdminGestion.css';
 
@@ -11,6 +12,10 @@ const AdminPsicologos = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estado para el modal
+  const [showModal, setShowModal] = useState(false);
+  const [psicologoToDelete, setPsicologoToDelete] = useState(null);
 
   useEffect(() => {
     cargarPsicologos();
@@ -41,14 +46,17 @@ const AdminPsicologos = () => {
     navigate(`/admin/psicologos/editar/${id}`);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este psicólogo?')) {
-      try {
-        await usuariosService.eliminarUsuario(id);
-        cargarPsicologos(searchTerm); // Recargar lista
-      } catch (err) {
-        alert('Error eliminando psicólogo: ' + err.message);
-      }
+  const handleDelete = (id, nombre) => {
+    setPsicologoToDelete({ id, nombre });
+    setShowModal(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await usuariosService.eliminarUsuario(psicologoToDelete.id);
+      cargarPsicologos(searchTerm); // Recargar lista
+    } catch (err) {
+      alert('Error eliminando psicólogo: ' + err.message);
     }
   };
 
@@ -143,7 +151,7 @@ const AdminPsicologos = () => {
                         </button>
                         <button
                           className="btn-action btn-delete"
-                          onClick={() => handleDelete(psicologo.id_usuario)}
+                          onClick={() => handleDelete(psicologo.id_usuario, `${psicologo.nombre} ${psicologo.paterno}`)}
                           title="Eliminar"
                         >
                           🗑️
@@ -157,6 +165,18 @@ const AdminPsicologos = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmDelete}
+        title="Eliminar Psicólogo"
+        message={`¿Estás seguro de eliminar al psicólogo ${psicologoToDelete?.nombre}? Esta acción no se puede deshacer.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </>
   );
 };

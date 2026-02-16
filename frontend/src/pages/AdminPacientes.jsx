@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import ConfirmModal from '../components/ConfirmModal';
 import usuariosService from '../services/usuariosService';
 import './AdminGestion.css';
 
@@ -11,6 +12,10 @@ const AdminPacientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estado para el modal
+  const [showModal, setShowModal] = useState(false);
+  const [pacienteToDelete, setPacienteToDelete] = useState(null);
 
   useEffect(() => {
     cargarPacientes();
@@ -41,14 +46,17 @@ const AdminPacientes = () => {
     navigate(`/admin/pacientes/editar/${id}`);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este paciente?')) {
-      try {
-        await usuariosService.eliminarUsuario(id);
-        cargarPacientes(searchTerm); // Recargar lista
-      } catch (err) {
-        alert('Error eliminando paciente: ' + err.message);
-      }
+  const handleDelete = (id, nombre) => {
+    setPacienteToDelete({ id, nombre });
+    setShowModal(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await usuariosService.eliminarUsuario(pacienteToDelete.id);
+      cargarPacientes(searchTerm); // Recargar lista
+    } catch (err) {
+      alert('Error eliminando paciente: ' + err.message);
     }
   };
 
@@ -139,7 +147,7 @@ const AdminPacientes = () => {
                         </button>
                         <button
                           className="btn-action btn-delete"
-                          onClick={() => handleDelete(paciente.id_usuario)}
+                          onClick={() => handleDelete(paciente.id_usuario, `${paciente.nombre} ${paciente.paterno}`)}
                           title="Eliminar"
                         >
                           🗑️
@@ -153,6 +161,18 @@ const AdminPacientes = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmDelete}
+        title="Eliminar Paciente"
+        message={`¿Estás seguro de eliminar al paciente ${pacienteToDelete?.nombre}? Esta acción no se puede deshacer.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </>
   );
 };
