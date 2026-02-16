@@ -1,24 +1,39 @@
-// App.jsx - Componente principal con rutas (ACTUALIZADO)
+// App.jsx - Con rutas de administrador
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import RecuperarContrasena from './pages/RecuperarContrasena';
+import AdminHome from './pages/AdminHome';
+import AdminPsicologos from './pages/AdminPsicologos';
+import AdminPacientes from './pages/AdminPacientes';
+import AgregarPsicologo from './pages/AgregarPsicologo';
+import AgregarPaciente from './pages/AgregarPaciente';
+import EditarPsicologo from './pages/EditarPsicologo';
+import EditarPaciente from './pages/EditarPaciente';
 import './App.css';
 
 // Componente para proteger rutas privadas
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const PrivateRoute = ({ children, allowedRoles }) => {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return <div className="loading">Cargando...</div>;
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // Verificar si el usuario tiene el rol permitido
+  if (allowedRoles && !allowedRoles.includes(user?.rol)) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
 };
 
-// Componente para rutas públicas (si ya está autenticado, redirige al dashboard)
+// Componente para rutas públicas
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -26,14 +41,36 @@ const PublicRoute = ({ children }) => {
     return <div className="loading">Cargando...</div>;
   }
 
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />;
+  return !isAuthenticated ? children : <Navigate to="/" />;
 };
 
 function AppRoutes() {
+  const { user, loading } = useAuth();
+
+  // Mostrar loading mientras se carga el usuario
+  if (loading) {
+    return <div className="loading">Cargando...</div>;
+  }
+
   return (
     <Routes>
-      {/* Ruta raíz redirige al login o dashboard según autenticación */}
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      {/* Ruta raíz - Redirige según el rol */}
+      <Route
+        path="/"
+        element={
+          user ? (
+            user.rol === 'administrador' ? (
+              <Navigate to="/admin" replace />
+            ) : user.rol === 'psicologo' ? (
+              <Navigate to="/psicologo" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
 
       {/* Rutas públicas */}
       <Route
@@ -61,12 +98,70 @@ function AppRoutes() {
         }
       />
 
-      {/* Rutas privadas */}
+      {/* Rutas de Administrador */}
       <Route
-        path="/dashboard"
+        path="/admin"
         element={
-          <PrivateRoute>
-            <Dashboard />
+          <PrivateRoute allowedRoles={['administrador']}>
+            <AdminHome />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/psicologos"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <AdminPsicologos />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/psicologos/agregar"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <AgregarPsicologo />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/psicologos/editar/:id"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <EditarPsicologo />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/pacientes"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <AdminPacientes />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/pacientes/agregar"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <AgregarPaciente />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/pacientes/editar/:id"
+        element={
+          <PrivateRoute allowedRoles={['administrador']}>
+            <EditarPaciente />
+          </PrivateRoute>
+        }
+      />
+
+      {/* Ruta de Psicólogo (placeholder por ahora) */}
+      <Route
+        path="/psicologo"
+        element={
+          <PrivateRoute allowedRoles={['psicologo']}>
+            <div className="loading">Vista de Psicólogo - Próximamente</div>
           </PrivateRoute>
         }
       />

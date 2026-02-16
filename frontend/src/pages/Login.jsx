@@ -1,4 +1,4 @@
-// Login - Versión con imagen (más fácil de personalizar)
+// Login - Versión que bloquea acceso a pacientes
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -30,11 +30,31 @@ const Login = () => {
     setError('');
 
     try {
-      await login(formData.correo, formData.contrasena);
-      navigate('/dashboard');
+      const data = await login(formData.correo, formData.contrasena);
+      
+      // Bloquear acceso a pacientes
+      if (data.user.rol === 'paciente') {
+        // Primero mostrar el error
+        setError('Los pacientes deben usar la aplicación móvil. Este portal es solo para psicólogos y administradores.');
+        
+        // Hacer logout limpiando todo
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Terminar aquí sin redirigir
+        setLoading(false);
+        return;
+      }
+      
+      // Redirigir según el rol
+      if (data.user.rol === 'administrador') {
+        navigate('/admin');
+      } else if (data.user.rol === 'psicologo') {
+        navigate('/psicologo');
+      }
+      
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
-    } finally {
       setLoading(false);
     }
   };
@@ -46,21 +66,11 @@ const Login = () => {
       <div className="login-simple-content">
         <div className="login-simple-header">
           <h1>Bienvenido!</h1>
-          <p>Más calma. Menos agotamiento</p>
+          <p>Portal Web - Psicólogos y Administradores</p>
         </div>
 
-        {/* Aquí irá tu imagen del panda */}
         <div className="panda-image-container">
-          {/* Opción 1: Emoji de panda (temporal) */}
           <div className="panda-emoji">🐼</div>
-          
-          {/* Opción 2: Cuando tengas la imagen, descomenta esto:
-          <img 
-            src="/panda-meditation.png" 
-            alt="Panda meditando" 
-            className="panda-image"
-          />
-          */}
         </div>
 
           {error && (
@@ -96,7 +106,7 @@ const Login = () => {
           </div>
 
           <div className="recuperar-link-simple">
-            <a href="/recuperar-contrasena">Recuperar contraseña</a>
+            <a href="/recuperar-contrasena">¿Olvidaste tu contraseña?</a>
           </div>
 
 
@@ -109,6 +119,12 @@ const Login = () => {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <div className="login-footer-simple">
+          <p className="info-pacientes">
+            ¿Eres paciente? Descarga la aplicación móvil
+          </p>
+        </div>
       </div>
 
       <div className="wave-bottom-simple"></div>

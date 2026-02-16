@@ -1,4 +1,4 @@
-// Contexto de autenticación - Maneja el estado global del usuario
+// Contexto de autenticación - Versión mejorada
 import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../services/authService';
 
@@ -14,11 +14,19 @@ export const AuthProvider = ({ children }) => {
       try {
         if (authService.isAuthenticated()) {
           const currentUser = authService.getCurrentUser();
-          setUser(currentUser);
+          
+          // Si es paciente, hacer logout automático
+          if (currentUser?.rol === 'paciente') {
+            authService.logout();
+            setUser(null);
+          } else {
+            setUser(currentUser);
+          }
         }
       } catch (error) {
         console.error('Error cargando usuario:', error);
         authService.logout();
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -29,7 +37,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (correo, contrasena) => {
     const data = await authService.login(correo, contrasena);
-    setUser(data.user);
+    
+    // NO actualizar el estado si es paciente
+    if (data.user.rol !== 'paciente') {
+      setUser(data.user);
+    }
+    
     return data;
   };
 
@@ -55,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && user.rol !== 'paciente',
     loading,
   };
 

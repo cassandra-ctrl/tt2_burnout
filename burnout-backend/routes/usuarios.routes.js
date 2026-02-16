@@ -323,6 +323,7 @@ router.put(
             error: "Correo ya en uso por otro usuario",
           });
         }
+      }
 
         //sino esta en uso, actualizamos los datos
 
@@ -376,7 +377,7 @@ router.put(
             message: "Usuario actualizado exitosamente",
           });
         });
-      }
+      
     } catch (error) {
       console.error("Error actualizando usuario:", error);
       res.status(500).json({
