@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ConfirmModal from '../components/ConfirmModal';
+import SuccessModal from '../components/SuccessModal';
 import usuariosService from '../services/usuariosService';
 import './AdminGestion.css';
 
@@ -13,9 +14,13 @@ const AdminPsicologos = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Estado para el modal
+  // Estado para el modal de confirmación
   const [showModal, setShowModal] = useState(false);
   const [psicologoToDelete, setPsicologoToDelete] = useState(null);
+  
+  // Estado para el modal de éxito
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     cargarPsicologos();
@@ -54,6 +59,8 @@ const AdminPsicologos = () => {
   const confirmDelete = async () => {
     try {
       await usuariosService.eliminarUsuario(psicologoToDelete.id);
+      setSuccessMessage(`El psicólogo ${psicologoToDelete.nombre} ha sido eliminado exitosamente.`);
+      setShowSuccessModal(true);
       cargarPsicologos(searchTerm); // Recargar lista
     } catch (err) {
       alert('Error eliminando psicólogo: ' + err.message);
@@ -176,6 +183,15 @@ const AdminPsicologos = () => {
         confirmText="Sí, eliminar"
         cancelText="Cancelar"
         type="danger"
+      />
+
+      {/* Modal de éxito */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="¡Eliminado!"
+        message={successMessage}
+        type="success"
       />
     </>
   );

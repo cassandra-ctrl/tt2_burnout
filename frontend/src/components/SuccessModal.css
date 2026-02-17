@@ -1,0 +1,151 @@
+/* Estilos para SuccessModal */
+
+/* Overlay */
+.success-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Contenedor del modal */
+.success-modal-content {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: bounceIn 0.5s ease-out;
+  text-align: center;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Ícono del modal */
+.success-modal-icon {
+  font-size: 72px;
+  margin-bottom: 20px;
+  animation: scaleRotate 0.6s ease-out;
+}
+
+@keyframes scaleRotate {
+  0% {
+    transform: scale(0) rotate(-180deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.success-modal-icon-success {
+  filter: drop-shadow(0 4px 10px rgba(76, 175, 80, 0.3));
+}
+
+.success-modal-icon-error {
+  filter: drop-shadow(0 4px 10px rgba(244, 67, 54, 0.3));
+}
+
+.success-modal-icon-info {
+  filter: drop-shadow(0 4px 10px rgba(33, 150, 243, 0.3));
+}
+
+/* Título */
+.success-modal-title {
+  color: #1a1d3a;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 15px 0;
+}
+
+/* Mensaje */
+.success-modal-message {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 25px 0;
+}
+
+/* Botón */
+.success-modal-btn {
+  padding: 12px 40px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: white;
+  min-width: 150px;
+}
+
+.success-modal-btn-success {
+  background: #4caf50;
+}
+
+.success-modal-btn-success:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.success-modal-btn-error {
+  background: #f44336;
+}
+
+.success-modal-btn-error:hover {
+  background: #e53935;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+.success-modal-btn-info {
+  background: #2196f3;
+}
+
+.success-modal-btn-info:hover {
+  background: #1e88e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .success-modal-content {
+    padding: 30px 20px;
+  }
+
+  .success-modal-title {
+    font-size: 24px;
+  }
+
+  .success-modal-message {
+    font-size: 14px;
+  }
+
+  .success-modal-icon {
+    font-size: 60px;
+  }
+}

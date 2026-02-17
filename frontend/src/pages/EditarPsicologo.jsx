@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import SuccessModal from '../components/SuccessModal';
 import usuariosService from '../services/usuariosService';
 import './AgregarUsuario.css';
 
@@ -20,6 +21,7 @@ const EditarPsicologo = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Cargar datos del psicólogo al montar el componente
   useEffect(() => {
@@ -85,8 +87,13 @@ const EditarPsicologo = () => {
 
       await usuariosService.actualizarUsuario(id, userData);
       
-      // Redirigir a la lista de psicólogos
-      navigate('/admin/psicologos');
+      // Mostrar modal de éxito
+      setShowSuccessModal(true);
+      
+      // Esperar 3 segundos y redirigir
+      setTimeout(() => {
+        navigate('/admin/psicologos');
+      }, 3000);
       
     } catch (err) {
       // Extraer mensaje de error
@@ -243,6 +250,18 @@ const EditarPsicologo = () => {
           </form>
         </div>
       </div>
+
+      {/* Modal de éxito */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigate('/admin/psicologos');
+        }}
+        title="¡Psicólogo Actualizado!"
+        message={`Los datos del psicólogo ${formData.nombre} ${formData.paterno} han sido actualizados exitosamente.`}
+        type="success"
+      />
     </>
   );
 };

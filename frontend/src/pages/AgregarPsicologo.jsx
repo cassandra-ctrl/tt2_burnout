@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import SuccessModal from '../components/SuccessModal';
 import usuariosService from '../services/usuariosService';
 import './AgregarUsuario.css';
 
@@ -20,6 +21,7 @@ const AgregarPsicologo = () => {
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -67,8 +69,13 @@ const AgregarPsicologo = () => {
 
       await usuariosService.crearUsuario(userData);
       
-      // Redirigir a la lista de psicólogos
-      navigate('/admin/psicologos');
+      // Mostrar modal de éxito
+      setShowSuccessModal(true);
+      
+      // Esperar 3 segundos y redirigir
+      setTimeout(() => {
+        navigate('/admin/psicologos');
+      }, 3000);
       
     } catch (err) {
       // Extraer mensaje de error
@@ -238,6 +245,18 @@ const AgregarPsicologo = () => {
           </form>
         </div>
       </div>
+
+      {/* Modal de éxito */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigate('/admin/psicologos');
+        }}
+        title="¡Psicólogo Creado!"
+        message={`El psicólogo ${formData.nombre} ${formData.paterno} ha sido creado exitosamente.`}
+        type="success"
+      />
     </>
   );
 };
