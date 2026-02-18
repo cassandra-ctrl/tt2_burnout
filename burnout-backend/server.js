@@ -78,6 +78,12 @@ app.use("/api/progreso", require("./routes/progreso.routes"));
 app.use("/api/test-olbi", require("./routes/test-olbi.routes"));
 app.use("/api/recuperacion", require("./routes/recuperacion.routes"));
 app.use("/api/documentos", require("./routes/documentos-legales.routes"));
+app.use("/api/citas", require("./routes/citas.routes"));
+app.use("/api/psicologo", require("./routes/psicologos.routes"));
+app.use("/api/graficas", require("./routes/graficas.routes"));
+app.use("/api/logros", require("./routes/logros.routes"));
+app.use("/api/reportes", require("./routes/reportes.routes"));
+
 //RUTA NO ENCONTRADA
 app.use((req, res) => {
   res.status(404).json({

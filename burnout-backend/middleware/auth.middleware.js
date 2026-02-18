@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 const { db } = require("../config/database");
 
 //Verifica token jwt y carga informacion del usuario
-
 const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers["authorization"];
@@ -68,6 +67,7 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+//Se asegura de que el rol guardado en el token coincida con los roles permitidos para esa ruta
 const requireRole = (...roles) => {
   return (req, res, next) => {
     //verifica que tenga el token verificado
