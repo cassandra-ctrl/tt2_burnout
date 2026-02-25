@@ -1,11 +1,14 @@
-// Componente Navbar - Barra de navegación con logout
+// Componente Navbar - Barra de navegación con logout y menú para psicólogos
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from './ConfirmModal';
 import './Navbar.css';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
 
   const handleLogout = () => {
@@ -16,14 +19,49 @@ const Navbar = () => {
     logout();
   };
 
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
+  // Verificar si una ruta está activa
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+
   return (
     <>
       <nav className="navbar">
         <div className="navbar-container">
+          {/* Logo/Home */}
           <div className="navbar-brand">
-            <h2>Burnout App</h2>
+            <button 
+              className="btn-home"
+              onClick={() => handleNavigation(user?.rol === 'administrador' ? '/admin' : '/psicologo')}
+              title="Inicio"
+            >
+              🏠
+            </button>
           </div>
 
+          {/* Menú de navegación para psicólogos */}
+          {user?.rol === 'psicologo' && (
+            <div className="navbar-menu">
+              <button
+                className={`navbar-menu-btn ${isActive('/psicologo/citas') ? 'active' : ''}`}
+                onClick={() => handleNavigation('/psicologo/citas')}
+              >
+                Citas
+              </button>
+              <button
+                className={`navbar-menu-btn ${isActive('/psicologo/pacientes') ? 'active' : ''}`}
+                onClick={() => handleNavigation('/psicologo/pacientes')}
+              >
+                Pacientes
+              </button>
+            </div>
+          )}
+
+          {/* Usuario y logout */}
           <div className="navbar-user">
             <div className="user-info">
               <span className="user-name">

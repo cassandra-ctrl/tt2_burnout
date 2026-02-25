@@ -11,6 +11,10 @@ import AgregarPsicologo from './pages/AgregarPsicologo';
 import AgregarPaciente from './pages/AgregarPaciente';
 import EditarPsicologo from './pages/EditarPsicologo';
 import EditarPaciente from './pages/EditarPaciente';
+import PsicologoDashboard from './pages/PsicologoDashboard';
+import PsicologoPacientes from './pages/PsicologoPacientes';
+import PacienteDetalle from './pages/PacienteDetalle';
+import PsicologoCitas from './pages/PsicologoCitas';
 import './App.css';
 
 // Componente para proteger rutas privadas
@@ -161,10 +165,39 @@ function AppRoutes() {
         path="/psicologo"
         element={
           <PrivateRoute allowedRoles={['psicologo']}>
-            <div className="loading">Vista de Psicólogo - Próximamente</div>
+            <PsicologoDashboard />
           </PrivateRoute>
         }
       />
+      <Route
+        path="/psicologo/pacientes"
+        element={
+          <PrivateRoute allowedRoles={['psicologo']}>
+            <PsicologoPacientes />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/psicologo/pacientes/:id"
+        element={
+          <PrivateRoute allowedRoles={['psicologo']}>
+            <PacienteDetalle />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/psicologo/citas"
+        element={
+          <PrivateRoute allowedRoles={['psicologo']}>
+            <PsicologoCitas />
+          </PrivateRoute>
+        }
+      />
+      
+
+
+
+
 
       {/* Ruta 404 */}
       <Route path="*" element={<div className="not-found">Página no encontrada</div>} />

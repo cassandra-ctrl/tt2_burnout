@@ -1,0 +1,237 @@
+/* Estilos para PsicologoCitas */
+
+.psicologo-citas {
+  min-height: calc(100vh - 70px);
+  background: #e8eaf6;
+  padding: 30px 20px;
+}
+
+/* Loading */
+.citas-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 70px);
+  gap: 20px;
+}
+
+/* Header Superior */
+.citas-header-top {
+  max-width: 1400px;
+  margin: 0 auto 30px auto;
+  background: white;
+  padding: 25px 30px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.citas-titulo {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1d3a;
+  margin: 0 0 20px 0;
+}
+
+/* Controles */
+.citas-controles {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.fecha-navegacion {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btn-nav-semana {
+  background: #5c6bc0;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-nav-semana:hover {
+  background: #3f51b5;
+}
+
+.fecha-actual {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d3a;
+}
+
+.btn-anadir-cita {
+  padding: 12px 30px;
+  background: #7986CB;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-anadir-cita:hover {
+  background: #5c6bc0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(121, 134, 203, 0.4);
+}
+
+/* Calendario Semanal */
+.calendario-semanal {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+/* Header de la Semana */
+.semana-header {
+  display: grid;
+  grid-template-columns: 80px repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 10px;
+  min-width: 900px;
+}
+
+.dia-header {
+  text-align: center;
+  padding: 15px 10px;
+  background: #e8eaf6;
+  border-radius: 8px;
+}
+
+.dia-numero {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1d3a;
+  margin-bottom: 5px;
+}
+
+.dia-nombre {
+  font-size: 13px;
+  color: #666;
+  text-transform: capitalize;
+}
+
+/* Grid Container */
+.calendario-grid-container {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0;
+  min-width: 900px;
+}
+
+/* Columna de Horas */
+.columna-horas {
+  display: flex;
+  flex-direction: column;
+}
+
+.hora-label {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Grid de Días */
+.dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+/* Columna de Día */
+.dia-columna {
+  position: relative;
+  background: #fafafa;
+}
+
+/* Slots de Hora */
+.hora-slot {
+  height: 60px;
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+}
+
+/* Bloque de Cita */
+.cita-bloque {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+.cita-bloque:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.cita-bloque-contenido {
+  color: white;
+  font-size: 13px;
+}
+
+.cita-nombre {
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cita-hora-bloque {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .calendario-semanal {
+    overflow-x: scroll;
+  }
+}
+
+@media (max-width: 768px) {
+  .citas-controles {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fecha-navegacion {
+    justify-content: center;
+  }
+
+  .btn-anadir-cita {
+    width: 100%;
+  }
+
+  .citas-titulo {
+    font-size: 24px;
+  }
+}

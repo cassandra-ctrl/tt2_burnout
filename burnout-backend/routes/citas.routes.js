@@ -71,9 +71,9 @@ router.get("/", authenticate.required, noAdmin, async (req, res) => {
             c.observaciones,
             c.created_at,
             cat.id_categoria,
-            cat.tipo_categoria,
+            cat.tipo_cita,
             p.id_paciente,
-            CONCAT(up.nombre,' ',up.paterno,' ',COALESCE(up.materno, '' )) as paciente_nombre, ps.id_psicologo
+            CONCAT(up.nombre,' ',up.paterno,' ',COALESCE(up.materno, '' )) as paciente_nombre, ps.id_psicologo,
             CONCAT(ups.nombre, ' ',ups.paterno,' ',COALESCE(ups.materno, '')) as psicologo_nombre
         FROM citas c
         JOIN cat_cita cat ON c.id_categoria = cat.id_categoria
@@ -124,7 +124,7 @@ router.get("/", authenticate.required, noAdmin, async (req, res) => {
     //filtramos por estado (programada, completada, cancelada, inasistencia)
 
     if (estado) {
-      query += "AND c.estado = ?";
+      query += " AND c.estado = ?";
       params.push(estado);
     }
 
@@ -149,7 +149,7 @@ router.get("/", authenticate.required, noAdmin, async (req, res) => {
     //ordenamos por fecha y hora (las mas proximas primero)
     query += " ORDER BY c.fecha_cita ASC, c.hora_cita ASC";
 
-    const citas = await db.query(query, param);
+    const citas = await db.query(query, params);
 
     res.json({
       total: citas.length,

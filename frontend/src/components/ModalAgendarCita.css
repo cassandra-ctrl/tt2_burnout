@@ -1,0 +1,582 @@
+/* Estilos para ModalAgendarCita */
+
+.modal-agendar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-agendar-content {
+  background: white;
+  border-radius: 15px;
+  width: 95%;
+  max-width: 900px;
+  max-height: 95vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Header del Modal */
+.modal-agendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.modal-agendar-titulo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1d3a;
+  margin: 0;
+}
+
+.modal-agendar-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.modal-agendar-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* Información del Paciente */
+.modal-agendar-paciente {
+  padding: 20px 30px;
+  background: #f5f5f5;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.paciente-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.paciente-nombre {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d3a;
+}
+
+/* Formulario */
+.form-agendar {
+  padding: 30px;
+}
+
+/* Contenedor de Selectores Personalizados */
+.selectores-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+/* Selector de Fecha */
+.selector-fecha,
+.selector-hora {
+  background: #e8eaf6;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.selector-label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Display de Fecha Seleccionada */
+.fecha-display {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fecha-texto {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1d3a;
+  text-transform: capitalize;
+}
+
+.fecha-placeholder {
+  font-size: 16px;
+  color: #999;
+}
+
+.btn-editar-fecha {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Calendario Custom */
+.calendario-custom {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.calendario-custom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.mes-año-texto {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1d3a;
+  text-transform: capitalize;
+}
+
+.navegacion-mes {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-nav-mes {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.btn-nav-mes:hover {
+  background: #f0f0f0;
+}
+
+.dias-semana-custom {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.dia-semana-custom {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  padding: 8px;
+}
+
+.dias-grid-custom {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.dia-btn-custom {
+  aspect-ratio: 1;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dia-btn-custom:hover:not(.vacio):not(.pasado) {
+  background: #e8eaf6;
+}
+
+.dia-btn-custom.vacio {
+  background: transparent;
+  cursor: default;
+}
+
+.dia-btn-custom.pasado {
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dia-btn-custom.seleccionado {
+  background: #5c6bc0;
+  color: white;
+  font-weight: 600;
+}
+
+.calendario-botones,
+.hora-botones {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-cal-accion,
+.btn-hora-accion {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: #5c6bc0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-cal-accion:hover,
+.btn-hora-accion:hover {
+  background: #f0f0f0;
+}
+
+.btn-cal-accion.siguiente,
+.btn-hora-accion.agendar {
+  background: #5c6bc0;
+  color: white;
+}
+
+.btn-cal-accion.siguiente:hover,
+.btn-hora-accion.agendar:hover {
+  background: #3f51b5;
+}
+
+/* Selector de Hora */
+.hora-selector {
+  background: white;
+  border-radius: 12px;
+  padding: 25px 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.hora-numero-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-hora-cambio {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px 15px;
+}
+
+.btn-hora-cambio:hover {
+  color: #5c6bc0;
+}
+
+.hora-numero {
+  font-size: 40px;
+  font-weight: 600;
+  color: #5c6bc0;
+  background: #e8eaf6;
+  padding: 15px 20px;
+  border-radius: 10px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.hora-label-pequeño {
+  font-size: 11px;
+  color: #999;
+}
+
+.hora-separador {
+  font-size: 40px;
+  font-weight: 600;
+  color: #5c6bc0;
+  margin: 0 5px;
+}
+
+.periodo-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 10px;
+}
+
+.btn-periodo {
+  padding: 12px 18px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-periodo.activo {
+  background: #5c6bc0;
+  border-color: #5c6bc0;
+  color: white;
+}
+
+.btn-periodo:hover:not(.activo) {
+  border-color: #5c6bc0;
+  color: #5c6bc0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.required {
+  color: #f44336;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #e0e0e0;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.form-select{
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #333;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #5c6bc0;
+  box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-select {
+  cursor: pointer;
+  background: white;
+}
+
+/* Error */
+.form-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border-left: 4px solid #f44336;
+}
+
+/* Botones */
+.form-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.btn-cancelar,
+.btn-agendar {
+  flex: 1;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-cancelar {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.btn-cancelar:hover:not(:disabled) {
+  background: #d0d0d0;
+}
+
+.btn-agendar {
+  background: #5c6bc0;
+  color: white;
+}
+
+.btn-agendar:hover:not(:disabled) {
+  background: #3f51b5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(92, 107, 192, 0.4);
+}
+
+.btn-cancelar:disabled,
+.btn-agendar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .selectores-container {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-agendar-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .modal-agendar-header {
+    padding: 20px;
+  }
+
+  .modal-agendar-titulo {
+    font-size: 20px;
+  }
+
+  .form-agendar {
+    padding: 20px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .btn-cancelar,
+  .btn-agendar {
+    width: 100%;
+  }
+
+  .hora-numero {
+    font-size: 32px;
+    padding: 12px 15px;
+    min-width: 65px;
+  }
+
+  .hora-separador {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal-agendar-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .modal-agendar-header {
+    padding: 20px;
+  }
+
+  .modal-agendar-titulo {
+    font-size: 20px;
+  }
+
+  .form-agendar {
+    padding: 20px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .btn-cancelar,
+  .btn-agendar {
+    width: 100%;
+  }
+
+  .hora-selector {
+    padding: 20px 10px;
+    gap: 5px;
+  }
+
+  .hora-numero {
+    font-size: 28px;
+    padding: 10px 12px;
+    min-width: 55px;
+  }
+
+  .hora-separador {
+    font-size: 28px;
+  }
+}
