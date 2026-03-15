@@ -1,18 +1,26 @@
-// SERVICIO DE API -conectar al backend
+// ============================================================================
+// SERVICIO API - Conexión con el backend
 // src/services/api.js
+// ============================================================================
 
-// AsyncStorage: Guarda datos de forma local (celular), como el token
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+// Cambia esta URL por la IP de tu computadora cuando pruebes en tu celular
+// Para emulador Android: 10.0.2.2
+// Para tu celular: usa la IP de tu computadora (ej: 192.168.1.100)
+// Para navegador web: localhost
+const API_URL =
+  Platform.OS === "web"
+    ? "http://localhost:3000/api"
+    : "http://192.168.1.2:3000/api";
 
-//Cambiar la url por la IP de la pc cuando se pruebe en el cel
-const API_URL = "http://10.0.2.2:3000/api";
+// ============================================================================
+// FUNCIÓN BASE PARA PETICIONES
+// ============================================================================
 
-//..........................................
-//FUNCION BASE PARA PETICIONES
 async function request(endpoint, options = {}) {
-  //busca si hay un token guardado en el celular
   const token = await AsyncStorage.getItem("token");
-  //prepara los encabezados para decirle al servidor que le enviemos datos en formato JSON
+
   const config = {
     ...options,
     headers: {
@@ -21,83 +29,83 @@ async function request(endpoint, options = {}) {
     },
   };
 
-  //Agregar el token existente
+  // Agregar token si existe
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
   try {
-    //va al endpoint que solicita el usuario
     const response = await fetch(`${API_URL}${endpoint}`, config);
-
-    //responde con un formato JSON
     const data = await response.json();
+
     if (!response.ok) {
-      //Lanza informacion del error al ingresar al endpoint
       throw {
         status: response.status,
-        message: data.message || data.error || "Error en la petición",
+        // Agregamos data.mensaje por si tu backend responde en español
+        message:
+          data.mensaje || data.message || data.error || "Error en la petición",
         data,
       };
     }
 
-    //Imprime la informacion del backend
     return data;
   } catch (error) {
-    //Hay un error en la conexion (internet)
     if (error.status) {
       throw error;
     }
     throw {
       status: 0,
-      message: "Error de conexión",
+      message: "Error de conexión. Verifica tu internet.",
       error,
     };
   }
 }
 
-//..........................................
+// ============================================================================
 // AUTENTICACIÓN
+// ============================================================================
+
 export const authAPI = {
-  //INICIAR SESION
+  // Iniciar sesión
   login: async (correo, contrasena) => {
-    //encia los datos al servidor
     const data = await request("/auth/login", {
       method: "POST",
       body: JSON.stringify({ correo, contrasena }),
     });
 
-    //si el servidor responde con un token (login exitoso)
+    // Guardar token (el backend devuelve 'user', no 'usuario')
     if (data.token) {
-      //se guarda el token y los datos del usuario en el celular
       await AsyncStorage.setItem("token", data.token);
-      await AsyncStorage.setItem("usuario", JSON.stringify(data.usuario));
+      await AsyncStorage.setItem("usuario", JSON.stringify(data.user));
     }
-    return data;
+
+    return { ...data, usuario: data.user };
   },
 
-  //REGISTRARSE
-  //envia los datos al servidor
+  // Registrarse
   register: async (datos) => {
     const data = await request("/auth/register", {
       method: "POST",
       body: JSON.stringify(datos),
     });
 
-    //guarda el token en la memoria del celular
+    // Guardar token (el backend devuelve 'user', no 'usuario')
     if (data.token) {
       await AsyncStorage.setItem("token", data.token);
-      await AsyncStorage.setItem("usuario", JSON.stringify(data.usuario));
+      await AsyncStorage.setItem("usuario", JSON.stringify(data.user));
     }
-    return data;
+
+    return { ...data, usuario: data.user };
   },
 
-  //Obtiene el perfil
+  // Obtener perfil
   getProfile: async () => {
-    return await request("/auth/me");
+    const data = await request("/auth/me");
+    // Normalizar la respuesta
+    return { ...data, usuario: data.user || data.usuario };
   },
 
-  //Cerrar sesion
+  // Cerrar sesión
   logout: async () => {
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("usuario");
@@ -110,12 +118,13 @@ export const authAPI = {
   },
 };
 
-//..........................................
+// ============================================================================
 // RECUPERACIÓN DE CONTRASEÑA
+// ============================================================================
+
 export const recuperacionAPI = {
-  //solicitar codigo
+  // Solicitar código
   solicitarCodigo: async (correo) => {
-    //enviamos el correo al servidor en formato JSON
     return await request("/recuperacion/solicitar", {
       method: "POST",
       body: JSON.stringify({ correo }),
@@ -130,51 +139,77 @@ export const recuperacionAPI = {
     });
   },
 
-  //cambiamos la contrasena
-  cambiarContrasena: async (correo, codigo, nueva_contrasena) => {
+  // Cambiar contraseña
+  cambiarContrasena: async (
+    correo,
+    codigo,
+    nueva_contrasena,
+    confirmar_contrasena,
+  ) => {
     return await request("/recuperacion/cambiar", {
       method: "POST",
-      body: JSON.stringify({ correo, codigo, nueva_contrasena }),
+      body: JSON.stringify({
+        correo,
+        codigo,
+        nueva_contrasena,
+        confirmar_contrasena,
+      }),
     });
   },
 };
 
-//................................
+// ============================================================================
 // DOCUMENTOS LEGALES
+// ============================================================================
+
 export const documentosAPI = {
-  //obtener estado de documentos
+  // Obtener estado de documentos
   getEstado: async () => {
     return await request("/documentos/estado");
   },
 
-  //Obtenemos documento por tipo
-  getDocumento: async (tipo) => {
-    return await request(`/documentos/${tipo}`);
+  // Obtener consentimiento informado
+  getConsentimiento: async () => {
+    return await request("/documentos/consentimiento");
   },
 
-  //aceptar documento
-  aceptar: async (tipo) => {
-    return await request(`/documentos/${tipo}/aceptar`, {
+  // Obtener aviso de privacidad
+  getAvisoPrivacidad: async () => {
+    return await request("/documentos/aviso-privacidad");
+  },
+
+  // Aceptar documento (envía id_documento)
+  aceptar: async (id_documento) => {
+    return await request("/documentos/aceptar", {
+      method: "POST",
+      body: JSON.stringify({ id_documento }),
+    });
+  },
+
+  // Aceptar todos los documentos
+  aceptarTodos: async () => {
+    return await request("/documentos/aceptar-todos", {
       method: "POST",
     });
   },
 };
 
-//..................................
+// ============================================================================
 // TEST OLBI
+// ============================================================================
 
 export const testAPI = {
-  //obtenemos el estado del test
+  // Obtener estado del test
   getEstado: async () => {
     return await request("/test-olbi/estado");
   },
 
-  //obtener preguntas
+  // Obtener preguntas
   getPreguntas: async () => {
     return await request("/test-olbi/preguntas");
   },
 
-  //enviar respuestas
+  // Enviar respuestas
   responder: async (tipo_prueba, respuestas) => {
     return await request("/test-olbi/responder", {
       method: "POST",
@@ -188,44 +223,46 @@ export const testAPI = {
   },
 };
 
-//...............................................
+// ============================================================================
 // MÓDULOS Y ACTIVIDADES
+// ============================================================================
 
 export const modulosAPI = {
-  //obtener todos los modulos
+  // Obtener todos los módulos
   getAll: async () => {
     return await request("/modulos");
   },
 
-  //obtener modulo por id
+  // Obtener módulo por ID
   getById: async (id) => {
     return await request(`/modulos/${id}`);
   },
 
-  //obtener actividades de un modulo
+  // Obtener actividades de un módulo
   getActividades: async (id) => {
     return await request(`/modulos/${id}/actividades`);
   },
 };
 
-/// esta no tendria que estar dentro de modulo?(checarlo)
 export const actividadesAPI = {
-  //obtener actividad por id
+  // Obtener actividad por ID
   getById: async (id) => {
     return await request(`/actividades/${id}`);
   },
 };
 
-// ..........................................
-//PROGRESO
+// ============================================================================
+// PROGRESO
+// ============================================================================
+
 export const progresoAPI = {
-  //obtener progreso general
+  // Obtener progreso general
   getGeneral: async () => {
     return await request("/progreso");
   },
 
-  //iniciar actividad
-  iniciarActividad: async () => {
+  // Iniciar actividad
+  iniciarActividad: async (id_actividad) => {
     return await request("/progreso/actividad/iniciar", {
       method: "POST",
       body: JSON.stringify({ id_actividad }),
@@ -241,15 +278,17 @@ export const progresoAPI = {
   },
 };
 
-// ..........................................
-//GRAFICAS
+// ============================================================================
+// GRÁFICAS
+// ============================================================================
+
 export const graficasAPI = {
-  //obtenemos el desempeno del modulo actual
+  // Obtener desempeño (módulo actual)
   getDesempeno: async (idPaciente) => {
     return await request(`/graficas/paciente/${idPaciente}/desempeno`);
   },
 
-  //obtener comparacion burnout
+  // Obtener comparación burnout
   getComparacionBurnout: async (idPaciente) => {
     return await request(
       `/graficas/paciente/${idPaciente}/comparacion-burnout`,
@@ -257,43 +296,51 @@ export const graficasAPI = {
   },
 };
 
-//.................................................
+// ============================================================================
 // LOGROS
+// ============================================================================
+
 export const logrosAPI = {
-  //obtener todos lod logros
+  // Obtener todos los logros
   getAll: async () => {
     return await request("/logros");
   },
 
-  //obtener mis logros
+  // Obtener mis logros
   getMisLogros: async () => {
     return await request("/logros/mis-logros");
   },
 
-  //obtener estadisticas
+  // Obtener estadísticas
   getEstadisticas: async () => {
     return await request("/logros/estadisticas");
   },
 
-  //verificar mis logros
+  // Verificar nuevos logros
   verificar: async () => {
     return await request("/logros/verificar");
   },
 };
 
-//....................................
+// ============================================================================
 // CITAS
+// ============================================================================
+
 export const citasAPI = {
-  //obtener citas
+  // Obtener mis citas
   getMisCitas: async () => {
     return await request("/citas/mis-citas");
   },
 
-  //obtener detalle cita
+  // Obtener detalle de cita
   getById: async (id) => {
     return await request(`/citas/${id}`);
   },
 };
+
+// ============================================================================
+// EXPORTAR TODO
+// ============================================================================
 
 export default {
   auth: authAPI,

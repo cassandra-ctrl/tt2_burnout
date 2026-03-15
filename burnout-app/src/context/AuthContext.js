@@ -1,73 +1,71 @@
+// ============================================================================
 // CONTEXTO DE AUTENTICACIÓN
 // src/context/AuthContext.js
+//
 // Maneja el estado global del usuario logueado
-
-// createContext: Crea un "espacio compartido". es una nube accesible desde cualquier pantalla de tu app sin tener que pasar datos manualmente de una a otra.
-
-//useState: Es la memoria local.
-
-//useEffect: Permite ejecutar código automáticamente cuando algo sucede
-
-//useContext: gancho para leer los datos de esa nube compartida.* *///
+// ============================================================================
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authAPI } from "../services/api";
+
 // Crear el contexto
 const AuthContext = createContext({});
 
+// ============================================================================
 // PROVEEDOR DEL CONTEXTO
+// ============================================================================
+
 export function AuthProvider({ children }) {
-  //usuario: ¿Quién está usando la app?
   const [usuario, setUsuario] = useState(null);
-  //cargando: ¿Estamos esperando al servidor?
-  const [cargando, setCargando] = useState(true);
-  //error: ¿Pasó algo malo?
+  const [cargando, setCargando] = useState(false);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
   const [error, setError] = useState(null);
 
-  //Verificamos si ya se inicio sesion antes
+  // -------------------------------------------------------------------------
+  // Verificar sesión al iniciar la app
+  // -------------------------------------------------------------------------
   useEffect(() => {
     verificarSesion();
   }, []);
 
-  //seguimos este patron:
-  // 1. Limpiar errores viejos
-  // 2. Bloquear (espera al servidor)
-  // 3. Llamar: usa authAPI para hablar con el servidor
-  // 4. Guarda los datos
-  // 5. desbloquea: (estado de espera)
-
   const verificarSesion = async () => {
     try {
-      //bloquea la pantalla un momento para "pensar" y no mostrarte la pantalla de Login ni la de Home incorrectamente.
-      setCargando(true);
-      //vemos si ya existe un token creado
       const token = await AsyncStorage.getItem("token");
 
       if (token) {
         // Verificar que el token siga válido
-        const data = await authAPI.getProfile();
-        setUsuario(data.usuario);
+        try {
+          const data = await authAPI.getProfile();
+          const user = data.usuario || data.user;
+          setUsuario(user);
+        } catch (err) {
+          // Token inválido o expirado
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("usuario");
+          setUsuario(null);
+        }
       }
     } catch (err) {
-      // Token inválido o expirado
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("usuario");
+      console.log("Error verificando sesión:", err);
       setUsuario(null);
     } finally {
-      //Garantiza que la app no se quede "cargando" infinitamente.
-      setCargando(false);
+      setCargandoInicial(false);
     }
   };
 
-  //....................
+  // -------------------------------------------------------------------------
   // Iniciar sesión
+  // -------------------------------------------------------------------------
   const login = async (correo, contrasena) => {
     try {
       setError(null);
       setCargando(true);
+
       const data = await authAPI.login(correo, contrasena);
-      setUsuario(data.usuario);
+      const user = data.usuario || data.user;
+      setUsuario(user);
+
       return { success: true, data };
     } catch (err) {
       setError(err.message);
@@ -77,25 +75,38 @@ export function AuthProvider({ children }) {
     }
   };
 
-  //....................
+  // -------------------------------------------------------------------------
   // Registrarse
+  // -------------------------------------------------------------------------
   const register = async (datos) => {
     try {
       setError(null);
       setCargando(true);
+
       const data = await authAPI.register(datos);
-      setUsuario(data.usuario);
+
+      const user = data.usuario || data.user;
+      setUsuario(user);
+
       return { success: true, data };
     } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+      // err.message es el texto que extrajimos en api.js
+      // err.data contiene el JSON completo del backend por si lo necesitas
+      const mensajeError =
+        err.message || "Error inesperado al registrar la cuenta.";
+
+      setError(mensajeError);
+
+      // Retornamos el objeto exacto que espera tu RegisterScreen
+      return { success: false, error: mensajeError };
     } finally {
       setCargando(false);
     }
   };
 
-  //.........................
-  //cerrar sesion
+  // -------------------------------------------------------------------------
+  // Cerrar sesión
+  // -------------------------------------------------------------------------
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -105,30 +116,34 @@ export function AuthProvider({ children }) {
     }
   };
 
-  //........................
+  // -------------------------------------------------------------------------
   // Actualizar datos del usuario
+  // -------------------------------------------------------------------------
   const actualizarUsuario = async () => {
     try {
       const data = await authAPI.getProfile();
-      setUsuario(data.usuario);
-      await AsyncStorage.setItem("usuario", JSON.stringify(data.usuario));
+      const user = data.usuario || data.user;
+      setUsuario(user);
+      await AsyncStorage.setItem("usuario", JSON.stringify(user));
     } catch (err) {
       console.error("Error actualizando usuario:", err);
     }
   };
 
-  //..............................
+  // -------------------------------------------------------------------------
   // Limpiar error
+  // -------------------------------------------------------------------------
   const limpiarError = () => {
     setError(null);
   };
 
-  //.....................
+  // -------------------------------------------------------------------------
   // Valores del contexto
-
+  // -------------------------------------------------------------------------
   const value = {
     usuario,
     cargando,
+    cargandoInicial,
     error,
     estaLogueado: !!usuario,
     login,
@@ -141,7 +156,9 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// ============================================================================
 // HOOK PARA USAR EL CONTEXTO
+// ============================================================================
 
 export function useAuth() {
   const context = useContext(AuthContext);

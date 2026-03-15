@@ -13,14 +13,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-import { Button, Input } from "../components";
 import { colors, fonts, spacing } from "../utils/theme";
+import { Button, Input, ModalAlert } from "../components";
 
 export default function LoginScreen({ navigation }) {
   // Estados del formulario
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [errores, setErrores] = useState({});
+
+  //para la alerta
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    titulo: "",
+    mensaje: "",
+    tipo: "warning",
+  });
 
   // Hook de autenticación
   const { login, cargando } = useAuth();
@@ -49,10 +57,15 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     if (!validarFormulario()) return;
 
-    const resultado = await login(correo.trim().toLowerCase(), contrasena);
+    const resultado = await login(correo, contrasena);
 
     if (!resultado.success) {
-      Alert.alert("Error", resultado.error || "No se pudo iniciar sesión");
+      setModalConfig({
+        titulo: "Error de inicio de sesión",
+        mensaje: resultado.error || "Correo o contraseña incorrectos",
+        tipo: "error",
+      });
+      setModalVisible(true);
     }
     // Si es exitoso, el AuthContext redirigirá automáticamente
   };
@@ -131,6 +144,13 @@ export default function LoginScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ModalAlert
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        titulo={modalConfig.titulo}
+        mensaje={modalConfig.mensaje}
+        tipo={modalConfig.tipo}
+      />
     </SafeAreaView>
   );
 }
