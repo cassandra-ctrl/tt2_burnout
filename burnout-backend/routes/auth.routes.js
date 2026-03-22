@@ -112,9 +112,14 @@ router.post(
     body("materno").optional().trim(),
     body("correo").isEmail().withMessage("Correo inválido"),
     body("contrasena")
-      .isLength({ min: 6 })
-      .withMessage("La contraseña debe contener al menos 6 caracteres"),
-    body("matricula").trim().notEmpty().withMessage("Matrícula requerida"),
+      .isLength({ min: 8 })
+      .withMessage("La contraseña debe contener al menos 8 caracteres"),
+    body("matricula")
+      .trim()
+      .notEmpty()
+      .withMessage("Matrícula requerida")
+      .matches(/^\d{10}$/)
+      .withMessage("La matrícula debe contener 10 dígitos"),
   ],
   async (req, res) => {
     try {

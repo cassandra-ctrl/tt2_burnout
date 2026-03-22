@@ -24,12 +24,12 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 
 //CORS: Permitir peticiones del fronted
+
 app.use(
   cors({
-    //si existe la variable de entorno la divide por comas, sino, permire conexion a todo el mundo
-
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
-    credentials: true,
+    origin: "*", // Permite cualquier origen (para desarrollo)
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
