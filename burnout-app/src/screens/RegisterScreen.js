@@ -59,8 +59,8 @@ export default function RegisterScreen({ navigation }) {
     // Validar matrícula
     if (!matricula.trim()) {
       nuevosErrores.matricula = "La matrícula es requerida";
-    } else if (matricula.length != 10) {
-      nuevosErrores.matricula = "La matrícula debe tener 10 dígitos";
+    } else if (!/^\d{10}$/.test(matricula)) {
+      nuevosErrores.matricula = "La matrícula debe contener exactamente 10 dígitos numéricos";
     }
 
     // Validar contraseña
@@ -179,8 +179,9 @@ export default function RegisterScreen({ navigation }) {
               label="Matrícula"
               placeholder="Matrícula escolar"
               value={matricula}
-              onChangeText={setMatricula}
-              autoCapitalize="none"
+              onChangeText={(val) => setMatricula(val.replace(/\D/g, ""))}
+              keyboardType="number-pad"
+              maxLength={10}
               icon="card-outline"
               error={errores.matricula}
             />

@@ -23,6 +23,7 @@ export default function Input({
   editable = true,
   multiline = false,
   numberOfLines = 1,
+  maxLength,
   style,
 }) {
   //Interactividad y calulos
@@ -76,6 +77,7 @@ export default function Input({
           editable={editable}
           multiline={multiline}
           numberOfLines={numberOfLines}
+          maxLength={maxLength}
           onFocus={() => setEnfocado(true)}
           onBlur={() => setEnfocado(false)}
         />
