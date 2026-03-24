@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
 import { documentosAPI } from "../services/api";
 import { Button, Loading } from "../components";
 import { colors, fonts, spacing } from "../utils/theme";
@@ -18,6 +19,7 @@ import { useWindowDimensions } from "react-native";
 
 export default function AvisoPrivacidadScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const { logout } = useAuth();
   const [documento, setDocumento] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [aceptando, setAceptando] = useState(false);
@@ -49,6 +51,10 @@ export default function AvisoPrivacidadScreen({ navigation }) {
       await documentosAPI.aceptar(documento.id_documento);
       navigation.navigate("TestOLBI", { tipo: "inicial" });
     } catch (error) {
+      if (error.status === 400) {
+        navigation.navigate("TestOLBI", { tipo: "inicial" });
+        return;
+      }
       Alert.alert("Error", error.message || "No se pudo aceptar el documento");
     } finally {
       setAceptando(false);
@@ -66,7 +72,7 @@ export default function AvisoPrivacidadScreen({ navigation }) {
         {
           text: "Salir",
           style: "destructive",
-          onPress: () => navigation.navigate("Login"),
+          onPress: () => logout(),
         },
       ],
     );

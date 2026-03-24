@@ -81,9 +81,7 @@ export default function TutorialScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.saltarBtn} onPress={handleSaltar}>
-        <Text style={styles.saltarText}>×</Text>
-      </TouchableOpacity>
+
 
       <ScrollView
         ref={scrollViewRef}

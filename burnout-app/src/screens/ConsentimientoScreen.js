@@ -20,7 +20,7 @@ import { useWindowDimensions } from "react-native";
 
 export default function ConsentimientoScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const { usuario } = useAuth();
+  const { logout } = useAuth();
   const [documento, setDocumento] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [aceptando, setAceptando] = useState(false);
@@ -50,6 +50,10 @@ export default function ConsentimientoScreen({ navigation }) {
       await documentosAPI.aceptar(documento.id_documento);
       navigation.navigate("AvisoPrivacidad");
     } catch (error) {
+      if (error.status === 400) {
+        navigation.navigate("AvisoPrivacidad");
+        return;
+      }
       Alert.alert("Error", error.message || "No se pudo aceptar el documento");
     } finally {
       setAceptando(false);
@@ -66,7 +70,7 @@ export default function ConsentimientoScreen({ navigation }) {
         {
           text: "Salir",
           style: "destructive",
-          onPress: () => navigation.navigate("Login"),
+          onPress: () => logout(),
         },
       ],
     );

@@ -12,7 +12,8 @@ import { Platform } from "react-native";
 const API_URL =
   Platform.OS === "web"
     ? "http://localhost:3000/api"
-    : "http://192.168.1.2:3000/api";
+    : "http://192.168.1.75:3000/api";
+    // :"http://10.100.73.216:3000/api";
 
 // ============================================================================
 // FUNCIÓN BASE PARA PETICIONES

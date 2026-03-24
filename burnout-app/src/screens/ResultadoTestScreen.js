@@ -76,14 +76,18 @@ export default function ResultadoTestScreen({ navigation, route }) {
           <View style={styles.puntajeItem}>
             <Text style={styles.puntajeLabel}>Agotamiento</Text>
             <Text style={styles.puntajeValor}>
-              {resultado?.puntaje_agotamiento?.toFixed(2) || "0.00"}
+              {resultado?.puntaje_agotamiento != null
+                ? Number(resultado.puntaje_agotamiento).toFixed(2)
+                : "0.00"}
             </Text>
           </View>
           <View style={styles.puntajeDivider} />
           <View style={styles.puntajeItem}>
             <Text style={styles.puntajeLabel}>Desvinculación</Text>
             <Text style={styles.puntajeValor}>
-              {resultado?.puntaje_desvinculacion?.toFixed(2) || "0.00"}
+              {resultado?.puntaje_desvinculacion != null
+                ? Number(resultado.puntaje_desvinculacion).toFixed(2)
+                : "0.00"}
             </Text>
           </View>
         </View>

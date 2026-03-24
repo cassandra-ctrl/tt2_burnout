@@ -16,10 +16,10 @@ import { Button, Loading, ModalAlert } from "../components";
 
 //Opciones de respuesta
 const OPCIONES = [
-  { valor: 1, color: "#357C3C" }, //se acuerdo
-  { valor: 2, color: "#5D9C59" }, // algo de acuero
-  { valor: 3, color: "#E64848" }, // algo en desacuedo
-  { valor: 4, color: "#C21010" }, // en desacuedo
+  { valor: 1 },
+  { valor: 2 },
+  { valor: 3 },
+  { valor: 4 },
 ];
 
 export default function TestOLBIScreen({ navigation, route }) {
@@ -170,12 +170,8 @@ export default function TestOLBIScreen({ navigation, route }) {
                   key={opcion.valor}
                   style={[
                     styles.opcionCirculo,
-                    { borderColor: opcion.color },
                     respuestas[pregunta.id_pregunta] === opcion.valor &&
                       styles.opcionSeleccionada,
-                    respuestas[pregunta.id_pregunta] === opcion.valor && {
-                      backgroundColor: opcion.color,
-                    },
                   ]}
                   onPress={() =>
                     seleccionarRespuesta(pregunta.id_pregunta, opcion.valor)
@@ -274,10 +270,13 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 2,
+    borderColor: "#9E9E9E",
     backgroundColor: "#E0E0E0",
   },
   opcionSeleccionada: {
     borderWidth: 3,
+    borderColor: "#1E3A5F",
+    backgroundColor: "#1E3A5F",
   },
   footer: {
     position: "absolute",
