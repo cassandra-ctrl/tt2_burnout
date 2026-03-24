@@ -106,15 +106,8 @@ export default function RegisterScreen({ navigation }) {
     const resultado = await register(datos);
 
     if (resultado.success) {
-      // Como tu AuthContext redirige automáticamente,
-      // solo ponemos una alerta nativa sencilla por si acaso.
-      if (Platform.OS === "web") {
-        window.alert("¡Registro exitoso!");
-      } else {
-        Alert.alert("Éxito", "Tu cuenta ha sido creada correctamente.");
-      }
+      navigation.navigate("VerificacionCorreo", { correo: resultado.correo });
     } else {
-      // AQUÍ GUARDAMOS EL ERROR PARA MOSTRARLO EN EL FORMULARIO
       setErrorBackend(resultado.error || "No se pudo crear la cuenta.");
     }
   };

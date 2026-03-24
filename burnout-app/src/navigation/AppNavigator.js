@@ -19,6 +19,7 @@ import RegisterScreen from "../screens/RegisterScreen";
 import RecuperarPasswordScreen from "../screens/RecuperarPasswordScreen";
 import VerificarCodigoScreen from "../screens/VerificarCodigoScreen";
 import NuevaContrasenaScreen from "../screens/NuevaContrasenaScreen";
+import VerificacionCorreoScreen from "../screens/VerificacionCorreoScreen";
 
 // Pantallas de onboarding/tutorial
 import TutorialScreen from "../screens/TutorialScreen";
@@ -45,6 +46,7 @@ function AuthStack() {
       />
       <Stack.Screen name="VerificarCodigo" component={VerificarCodigoScreen} />
       <Stack.Screen name="NuevaContrasena" component={NuevaContrasenaScreen} />
+      <Stack.Screen name="VerificacionCorreo" component={VerificacionCorreoScreen} />
     </Stack.Navigator>
   );
 }

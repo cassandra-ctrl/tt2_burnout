@@ -238,7 +238,56 @@ async function enviarConfirmacionCambio(email, nombre) {
   }
 }
 
+async function enviarCodigoVerificacion(email, nombre, codigo) {
+  const mailOptions = {
+    from: process.env.MAIL_FROM || process.env.MAIL_USER,
+    to: email,
+    subject: "✅ Verifica tu correo - BurnOut App",
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+    .container { max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header { text-align: center; border-bottom: 2px solid #1E3A5F; padding-bottom: 20px; margin-bottom: 20px; }
+    .header h1 { color: #1E3A5F; margin: 0; }
+    .codigo { background-color: #1E3A5F; color: white; font-size: 32px; font-weight: bold; text-align: center; padding: 20px; border-radius: 8px; letter-spacing: 8px; margin: 20px 0; }
+    .mensaje { color: #555; line-height: 1.6; }
+    .aviso { background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-top: 20px; font-size: 14px; color: #856404; }
+    .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>🌿 BurnOut App</h1></div>
+    <p class="mensaje">Hola <strong>${nombre}</strong>,</p>
+    <p class="mensaje">Gracias por registrarte. Usa el siguiente código para verificar tu correo electrónico:</p>
+    <div class="codigo">${codigo}</div>
+    <p class="mensaje">Este código expira en <strong>15 minutos</strong>.</p>
+    <div class="aviso">⚠️ Si no creaste esta cuenta, ignora este correo.</div>
+    <div class="footer">
+      <p>Este es un correo automático, por favor no respondas.</p>
+      <p>© ${new Date().getFullYear()} BurnOut App - ESCOM IPN</p>
+    </div>
+  </div>
+</body>
+</html>`,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Correo de verificación enviado:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Error enviando correo de verificación:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   enviarCodigoRecuperacion,
   enviarConfirmacionCambio,
+  enviarCodigoVerificacion,
 };

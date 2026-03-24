@@ -69,6 +69,15 @@ export function AuthProvider({ children }) {
       return { success: true, data };
     } catch (err) {
       setError(err.message);
+      // Si el backend indica que el correo no está verificado
+      if (err.data?.requiresVerification) {
+        return {
+          success: false,
+          requiresVerification: true,
+          correo: err.data?.correo,
+          error: err.message,
+        };
+      }
       return { success: false, error: err.message };
     } finally {
       setCargando(false);
@@ -85,23 +94,22 @@ export function AuthProvider({ children }) {
 
       const data = await authAPI.register(datos);
 
-      const user = data.usuario || data.user;
-      setUsuario(user);
-
-      return { success: true, data };
+      // No logueamos al usuario todavía — debe verificar su correo primero
+      return { success: true, requiresVerification: true, correo: data.correo };
     } catch (err) {
-      // err.message es el texto que extrajimos en api.js
-      // err.data contiene el JSON completo del backend por si lo necesitas
       const mensajeError =
         err.message || "Error inesperado al registrar la cuenta.";
 
       setError(mensajeError);
-
-      // Retornamos el objeto exacto que espera tu RegisterScreen
       return { success: false, error: mensajeError };
     } finally {
       setCargando(false);
     }
+  };
+
+  // Completar login después de verificar correo
+  const loginConDatos = (user) => {
+    setUsuario(user);
   };
 
   // -------------------------------------------------------------------------
@@ -147,6 +155,7 @@ export function AuthProvider({ children }) {
     error,
     estaLogueado: !!usuario,
     login,
+    loginConDatos,
     register,
     logout,
     actualizarUsuario,

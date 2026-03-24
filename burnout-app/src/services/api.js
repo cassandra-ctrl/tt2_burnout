@@ -112,6 +112,29 @@ export const authAPI = {
     await AsyncStorage.removeItem("usuario");
   },
 
+  // Verificar código de correo tras registro
+  verificarCorreo: async (correo, codigo) => {
+    const data = await request("/auth/verificar-correo", {
+      method: "POST",
+      body: JSON.stringify({ correo, codigo }),
+    });
+
+    if (data.token) {
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("usuario", JSON.stringify(data.user));
+    }
+
+    return { ...data, usuario: data.user };
+  },
+
+  // Reenviar código de verificación de correo
+  reenviarCodigoVerificacion: async (correo) => {
+    return await request("/auth/reenviar-verificacion", {
+      method: "POST",
+      body: JSON.stringify({ correo }),
+    });
+  },
+
   // Verificar si hay sesión activa
   isLoggedIn: async () => {
     const token = await AsyncStorage.getItem("token");
