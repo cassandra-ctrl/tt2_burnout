@@ -31,7 +31,7 @@ router.get("/paciente/:id", authenticate.required, async (req, res) => {
     // Obtenemos la info del paciente
     const paciente = await db.queryOne(
       `
-      SELECT 
+      SELECT
         p.id_paciente,
         u.nombre,
         u.paterno,
@@ -39,7 +39,10 @@ router.get("/paciente/:id", authenticate.required, async (req, res) => {
         p.matricula,
         p.tutorial_completado,
         p.test_olbi_inicial_completado,
-        p.test_olbi_final_completado
+        p.test_olbi_final_completado,
+        p.racha_actual,
+        p.racha_maxima,
+        p.ultimo_dia_actividad
       FROM paciente p
       JOIN usuario u ON p.id_usuario = u.id_usuario
       WHERE p.id_paciente = ?
@@ -123,6 +126,8 @@ router.get("/paciente/:id", authenticate.required, async (req, res) => {
         tutorial_completado: paciente.tutorial_completado,
         test_inicial_completado: paciente.test_olbi_inicial_completado,
         test_final_completado: paciente.test_olbi_final_completado,
+        racha_actual: paciente.racha_actual || 0,
+        racha_maxima: paciente.racha_maxima || 0,
       },
       progreso_general: {
         total_actividades: totalActividades.total_actividades,
@@ -299,8 +304,9 @@ router.post(
         );
       }
 
-      // Actualizamos el progreso del módulo
+      // Actualizamos el progreso del módulo y la racha
       await actualizarProgresoModulo(paciente.id_paciente, actividad.id_modulo);
+      await actualizarRacha(paciente.id_paciente);
 
       res.json({
         message: "Actividad marcada como completada",
@@ -393,6 +399,47 @@ router.post(
     }
   },
 );
+
+// Función auxiliar: Actualizar racha del paciente
+async function actualizarRacha(idPaciente) {
+  try {
+    const paciente = await db.queryOne(
+      "SELECT racha_actual, racha_maxima, ultimo_dia_actividad FROM paciente WHERE id_paciente = ?",
+      [idPaciente]
+    );
+
+    if (!paciente) return;
+
+    const hoy = new Date().toISOString().split("T")[0];
+    const ultimoDia = paciente.ultimo_dia_actividad
+      ? paciente.ultimo_dia_actividad.toISOString().split("T")[0]
+      : null;
+
+    if (ultimoDia === hoy) {
+      // Ya se contó la racha hoy, no hacer nada
+      return;
+    }
+
+    let nuevaRacha;
+    if (ultimoDia) {
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const ayerStr = ayer.toISOString().split("T")[0];
+      nuevaRacha = ultimoDia === ayerStr ? paciente.racha_actual + 1 : 1;
+    } else {
+      nuevaRacha = 1;
+    }
+
+    const nuevaMaxima = Math.max(nuevaRacha, paciente.racha_maxima || 0);
+
+    await db.query(
+      "UPDATE paciente SET racha_actual = ?, racha_maxima = ?, ultimo_dia_actividad = ? WHERE id_paciente = ?",
+      [nuevaRacha, nuevaMaxima, hoy, idPaciente]
+    );
+  } catch (error) {
+    console.error("Error actualizando racha:", error);
+  }
+}
 
 // Función auxiliar: Actualizar el progreso del módulo
 

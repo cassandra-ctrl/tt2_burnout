@@ -83,6 +83,8 @@ app.use("/api/psicologo", require("./routes/psicologos.routes"));
 app.use("/api/graficas", require("./routes/graficas.routes"));
 app.use("/api/logros", require("./routes/logros.routes"));
 app.use("/api/reportes", require("./routes/reportes.routes"));
+app.use("/api/diario", require("./routes/diario.routes"));
+app.use("/api/reflexiones", require("./routes/reflexiones.routes"));
 
 //RUTA NO ENCONTRADA
 app.use((req, res) => {
