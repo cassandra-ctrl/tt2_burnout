@@ -93,7 +93,8 @@ export default function ModulosScreen({ navigation }) {
       >
         <View style={styles.contenido}>
           {modulos.map((modulo, index) => {
-            const config = ESTADO_CONFIG[modulo.estado] || ESTADO_CONFIG.bloqueado;
+            const estadoVisual = modulo.bloqueado ? "bloqueado" : (modulo.estado === "bloqueado" ? "en_progreso" : modulo.estado);
+            const config = ESTADO_CONFIG[estadoVisual] || ESTADO_CONFIG.en_progreso;
             const porcentaje = modulo.porcentaje_completado || 0;
 
             return (
@@ -140,14 +141,12 @@ export default function ModulosScreen({ navigation }) {
                   </View>
                 )}
 
-                {/* Flecha o candado */}
-                <View style={styles.accionIcono}>
-                  <Ionicons
-                    name={modulo.bloqueado ? "lock-closed" : "chevron-forward"}
-                    size={20}
-                    color={modulo.bloqueado ? colors.gray : AZUL}
-                  />
-                </View>
+                {/* Candado solo si bloqueado */}
+                {modulo.bloqueado && (
+                  <View style={styles.accionIcono}>
+                    <Ionicons name="lock-closed" size={20} color={colors.gray} />
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}

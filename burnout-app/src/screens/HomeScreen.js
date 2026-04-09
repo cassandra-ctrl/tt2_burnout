@@ -108,7 +108,7 @@ export default function HomeScreen({ navigation }) {
               </Text>
               <Text style={styles.subtitulo}>¿Cómo te sientes hoy?</Text>
             </View>
-            <TouchableOpacity style={styles.campana}>
+            <TouchableOpacity style={styles.campana} onPress={() => navigation.navigate("Perfil")}>
               <Ionicons name="notifications-outline" size={24} color={colors.white} />
             </TouchableOpacity>
           </View>

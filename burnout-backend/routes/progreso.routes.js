@@ -466,21 +466,19 @@ async function actualizarProgresoModulo(idPaciente, idModulo) {
         ? Math.round((progreso.completadas / progreso.total_actividades) * 100)
         : 0;
 
-    // Determinar estado del módulo (usa 'completado' porque es progreso_modulo)
-    let estado;
-    if (porcentaje >= 100) {
-      estado = "completado";
-    } else if (porcentaje > 0) {
-      estado = "en_progreso";
-    } else {
-      estado = "bloqueado";
-    }
-
     // Verificar si existe registro de progreso del módulo
     const progresoModuloExistente = await db.queryOne(
       "SELECT id_paciente FROM progreso_modulo WHERE id_paciente = ? AND id_modulo = ?",
       [idPaciente, idModulo],
     );
+
+    // Determinar estado: si ya tiene registro está desbloqueado aunque sea 0%
+    let estado;
+    if (porcentaje >= 100) {
+      estado = "completado";
+    } else {
+      estado = "en_progreso";
+    }
 
     if (progresoModuloExistente) {
       if (estado === "completado") {

@@ -12,15 +12,37 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import YoutubePlayer from "react-native-youtube-iframe";
 import { progresoAPI, reflexionesAPI } from "../services/api";
 import { Button } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
 import { useNetwork } from "../context/NetworkContext";
 import { agregarCola, estaConectado } from "../utils/offline";
 import OfflineBanner from "../components/OfflineBanner";
+
+function esUrlWeb(texto) {
+  if (!texto || typeof texto !== "string") return false;
+  return texto.startsWith("http://") || texto.startsWith("https://");
+}
+
+// Extrae el video ID de cualquier formato de URL de YouTube
+function extraerVideoId(url) {
+  if (!url || typeof url !== "string") return null;
+  const regexes = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/shorts\/([^&\n?#]+)/,
+  ];
+  for (const re of regexes) {
+    const match = url.match(re);
+    if (match) return match[1];
+  }
+  return null;
+}
 
 const AZUL = "#1E3A5F";
 
@@ -36,9 +58,12 @@ const TIPO_CONFIG = {
 
 export default function ActividadScreen({ navigation, route }) {
   const { actividad, modulo } = route.params;
+  const { width } = useWindowDimensions();
 
   const tipo = TIPO_CONFIG[actividad.id_tipo] || TIPO_CONFIG[2];
   const yaCompletada = actividad.estado === "completada";
+  const videoId = extraerVideoId(actividad.contenido);
+  const esLectura = !videoId && esUrlWeb(actividad.contenido);
 
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
@@ -164,10 +189,34 @@ export default function ActividadScreen({ navigation, route }) {
             </View>
 
             {/* Contenido de la actividad */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitulo}>Descripción</Text>
-              <Text style={styles.contenidoTexto}>{actividad.contenido}</Text>
-            </View>
+            {videoId ? (
+              <View style={styles.videoCard}>
+                <YoutubePlayer
+                  height={(width - spacing.lg * 2) * 9 / 16}
+                  videoId={videoId}
+                  play={false}
+                />
+              </View>
+            ) : esLectura ? (
+              <View style={styles.card}>
+                <Text style={styles.cardTitulo}>Lectura</Text>
+                <Text style={styles.contenidoTexto}>
+                  Abre el artículo para completar esta actividad.
+                </Text>
+                <TouchableOpacity
+                  style={styles.botonLectura}
+                  onPress={() => Linking.openURL(actividad.contenido)}
+                >
+                  <Ionicons name="open-outline" size={18} color={colors.white} />
+                  <Text style={styles.botonLecturaTexto}>Abrir artículo</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.card}>
+                <Text style={styles.cardTitulo}>Descripción</Text>
+                <Text style={styles.contenidoTexto}>{actividad.contenido}</Text>
+              </View>
+            )}
 
             {/* Reflexión existente (si ya completó antes) */}
             {reflexionExistente && !mostrarReflexion && (
@@ -284,6 +333,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: "500",
   },
+  videoCard: {
+    borderRadius: borderRadius.lg,
+    overflow: "hidden",
+    marginBottom: spacing.md,
+    backgroundColor: colors.black,
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
@@ -343,4 +398,20 @@ const styles = StyleSheet.create({
   botonOmitirTexto: { fontSize: fonts.sizes.sm, color: colors.textSecondary },
   botonGuardar: { flex: 0, paddingHorizontal: spacing.lg, backgroundColor: AZUL },
   botonCompletar: { backgroundColor: AZUL, borderRadius: borderRadius.lg },
+  botonLectura: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: AZUL,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  botonLecturaTexto: {
+    color: colors.white,
+    fontWeight: "600",
+    fontSize: fonts.sizes.sm,
+  },
 });
