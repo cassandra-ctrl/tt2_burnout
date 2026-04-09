@@ -16,6 +16,8 @@ import { useAuth } from "../context/AuthContext";
 import { progresoAPI, logrosAPI, modulosAPI } from "../services/api";
 import { Loading } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { guardarCache, leerCache } from "../utils/offline";
+import OfflineBanner from "../components/OfflineBanner";
 
 const AZUL = "#1E3A5F";
 
@@ -37,15 +39,31 @@ export default function HomeScreen({ navigation }) {
         logrosAPI.getMisLogros(),
       ]);
 
+      guardarCache(`home_progreso_${pacienteId}`, progresoData);
+      guardarCache("home_modulos", modulosData);
+      guardarCache("home_logros", logrosData);
+
       setProgreso(progresoData);
       setModulos(modulosData.modulos || []);
 
       const misLogros = logrosData.logros || [];
-      if (misLogros.length > 0) {
-        setUltimoLogro(misLogros[0]);
-      }
+      if (misLogros.length > 0) setUltimoLogro(misLogros[0]);
     } catch (error) {
-      console.error("Error cargando datos del home:", error);
+      if (error.status === 0) {
+        const [progresoData, modulosData, logrosData] = await Promise.all([
+          leerCache(`home_progreso_${pacienteId}`),
+          leerCache("home_modulos"),
+          leerCache("home_logros"),
+        ]);
+        if (progresoData) setProgreso(progresoData);
+        if (modulosData) setModulos(modulosData.modulos || []);
+        if (logrosData) {
+          const misLogros = logrosData.logros || [];
+          if (misLogros.length > 0) setUltimoLogro(misLogros[0]);
+        }
+      } else {
+        console.error("Error cargando datos del home:", error);
+      }
     } finally {
       setCargando(false);
       setRefrescando(false);
@@ -74,6 +92,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={

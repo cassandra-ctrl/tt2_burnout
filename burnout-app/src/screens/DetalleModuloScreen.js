@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { progresoAPI } from "../services/api";
 import { Loading } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { guardarCache, leerCache } from "../utils/offline";
+import OfflineBanner from "../components/OfflineBanner";
 
 const AZUL = "#1E3A5F";
 
@@ -43,12 +45,22 @@ export default function DetalleModuloScreen({ navigation, route }) {
   const [refrescando, setRefrescando] = useState(false);
 
   const cargarActividades = useCallback(async () => {
+    const cacheKey = `detalle_modulo_${modulo.id_modulo}_${pacienteId}`;
     try {
       const data = await progresoAPI.getModuloProgreso(modulo.id_modulo, pacienteId);
+      guardarCache(cacheKey, data);
       setActividades(data.actividades || []);
       setProgresoModulo(data.progreso || null);
     } catch (error) {
-      console.error("Error cargando actividades:", error);
+      if (error.status === 0) {
+        const cached = await leerCache(cacheKey);
+        if (cached) {
+          setActividades(cached.actividades || []);
+          setProgresoModulo(cached.progreso || null);
+        }
+      } else {
+        console.error("Error cargando actividades:", error);
+      }
     } finally {
       setCargando(false);
       setRefrescando(false);
@@ -76,6 +88,7 @@ export default function DetalleModuloScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>

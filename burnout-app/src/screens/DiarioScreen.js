@@ -19,6 +19,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { diarioAPI } from "../services/api";
 import { Button } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { useNetwork } from "../context/NetworkContext";
+import { guardarCache, leerCache, agregarCola, estaConectado, getFechaLocal } from "../utils/offline";
+import OfflineBanner from "../components/OfflineBanner";
 
 const AZUL = "#1E3A5F";
 
@@ -39,19 +42,13 @@ function formatearFecha(fechaStr) {
   });
 }
 
-function getFechaLocal() {
-  const hoy = new Date();
-  const y = hoy.getFullYear();
-  const m = String(hoy.getMonth() + 1).padStart(2, "0");
-  const d = String(hoy.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 function esFechaHoy(fechaStr) {
   return normalizarFecha(fechaStr) === getFechaLocal();
 }
 
 export default function DiarioScreen() {
+  const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [entradaHoy, setEntradaHoy] = useState(null);
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -68,17 +65,29 @@ export default function DiarioScreen() {
         diarioAPI.getHoy(),
         diarioAPI.getHistorial(),
       ]);
+      guardarCache("diario_hoy", hoyData);
+      guardarCache("diario_historial", historialData);
 
       setEntradaHoy(hoyData.entrada);
       setTextoHoy(hoyData.entrada?.contenido || "");
-
-      // Filtrar el historial para no duplicar la entrada de hoy
       const entradasPasadas = (historialData.entradas || []).filter(
         (e) => !esFechaHoy(e.fecha)
       );
       setHistorial(entradasPasadas);
     } catch (error) {
-      console.error("Error cargando diario:", error);
+      if (error.status === 0) {
+        const hoyData = await leerCache("diario_hoy");
+        const historialData = await leerCache("diario_historial");
+        if (hoyData) {
+          setEntradaHoy(hoyData.entrada);
+          setTextoHoy(hoyData.entrada?.contenido || "");
+        }
+        if (historialData) {
+          setHistorial((historialData.entradas || []).filter((e) => !esFechaHoy(e.fecha)));
+        }
+      } else {
+        console.error("Error cargando diario:", error);
+      }
     } finally {
       setCargando(false);
       setRefrescando(false);
@@ -88,6 +97,11 @@ export default function DiarioScreen() {
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
+
+  // Recargar cuando el sync termina (lastSyncAt cambia)
+  useEffect(() => {
+    if (lastSyncAt) cargarDatos();
+  }, [lastSyncAt]);
 
   const onRefresh = () => {
     setRefrescando(true);
@@ -99,6 +113,21 @@ export default function DiarioScreen() {
       Alert.alert("Aviso", "Escribe algo antes de guardar.");
       return;
     }
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      const fecha = getFechaLocal();
+      await agregarCola({
+        type: "guardar_diario",
+        payload: { contenido: textoHoy.trim(), fecha },
+      });
+      await refrescarPendientes();
+      setEntradaHoy({ contenido: textoHoy.trim(), fecha });
+      setModoEdicion(false);
+      Alert.alert("Sin conexión", "Tu entrada se guardará cuando vuelvas a conectarte.");
+      return;
+    }
+
     try {
       setGuardando(true);
       const data = await diarioAPI.guardar(textoHoy.trim());
@@ -128,6 +157,7 @@ export default function DiarioScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

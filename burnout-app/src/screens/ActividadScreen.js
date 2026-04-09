@@ -18,6 +18,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { progresoAPI, reflexionesAPI } from "../services/api";
 import { Button } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { useNetwork } from "../context/NetworkContext";
+import { agregarCola, estaConectado } from "../utils/offline";
+import OfflineBanner from "../components/OfflineBanner";
 
 const AZUL = "#1E3A5F";
 
@@ -37,6 +40,7 @@ export default function ActividadScreen({ navigation, route }) {
   const tipo = TIPO_CONFIG[actividad.id_tipo] || TIPO_CONFIG[2];
   const yaCompletada = actividad.estado === "completada";
 
+  const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
   const [completada, setCompletada] = useState(yaCompletada);
   const [mostrarReflexion, setMostrarReflexion] = useState(false);
@@ -47,6 +51,10 @@ export default function ActividadScreen({ navigation, route }) {
   useEffect(() => {
     cargarReflexion();
   }, []);
+
+  useEffect(() => {
+    if (lastSyncAt) cargarReflexion();
+  }, [lastSyncAt]);
 
   const cargarReflexion = async () => {
     try {
@@ -61,6 +69,21 @@ export default function ActividadScreen({ navigation, route }) {
   };
 
   const handleCompletar = async () => {
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({
+        type: "completar_actividad",
+        payload: { id_actividad: actividad.id_actividad },
+      });
+      await refrescarPendientes();
+      setCompletada(true);
+      setMostrarReflexion(true);
+      Alert.alert(
+        "Sin conexión",
+        "La actividad se marcará como completada cuando vuelvas a conectarte."
+      );
+      return;
+    }
     try {
       setCompletando(true);
       await progresoAPI.completarActividad(actividad.id_actividad);
@@ -80,6 +103,18 @@ export default function ActividadScreen({ navigation, route }) {
       return;
     }
 
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({
+        type: "guardar_reflexion",
+        payload: { id_actividad: actividad.id_actividad, contenido: reflexion.trim() },
+      });
+      await refrescarPendientes();
+      setMostrarReflexion(false);
+      navigation.goBack();
+      return;
+    }
+
     try {
       setGuardandoReflexion(true);
       await reflexionesAPI.guardar(actividad.id_actividad, reflexion.trim());
@@ -94,6 +129,7 @@ export default function ActividadScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

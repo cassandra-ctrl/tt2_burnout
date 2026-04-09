@@ -16,6 +16,8 @@ import { useAuth } from "../context/AuthContext";
 import { modulosAPI, progresoAPI } from "../services/api";
 import { Loading } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { guardarCache, leerCache } from "../utils/offline";
+import OfflineBanner from "../components/OfflineBanner";
 
 const AZUL = "#1E3A5F";
 
@@ -36,9 +38,15 @@ export default function ModulosScreen({ navigation }) {
   const cargarModulos = useCallback(async () => {
     try {
       const data = await modulosAPI.getAll();
+      guardarCache("modulos_lista", data);
       setModulos(data.modulos || []);
     } catch (error) {
-      console.error("Error cargando módulos:", error);
+      if (error.status === 0) {
+        const cached = await leerCache("modulos_lista");
+        if (cached) setModulos(cached.modulos || []);
+      } else {
+        console.error("Error cargando módulos:", error);
+      }
     } finally {
       setCargando(false);
       setRefrescando(false);
@@ -69,6 +77,7 @@ export default function ModulosScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitulo}>Módulos</Text>

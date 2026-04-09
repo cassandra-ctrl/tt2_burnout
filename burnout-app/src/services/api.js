@@ -332,11 +332,11 @@ export const diarioAPI = {
     const fecha = getFechaLocal();
     return await request(`/diario/hoy?fecha=${fecha}`);
   },
-  guardar: async (contenido) => {
-    const fecha = getFechaLocal();
+  guardar: async (contenido, fecha = null) => {
+    const fechaFinal = fecha || getFechaLocal();
     return await request("/diario", {
       method: "POST",
-      body: JSON.stringify({ contenido, fecha }),
+      body: JSON.stringify({ contenido, fecha: fechaFinal }),
     });
   },
   getHistorial: async (pagina = 1, limite = 20) => {
