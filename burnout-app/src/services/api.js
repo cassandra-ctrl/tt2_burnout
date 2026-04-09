@@ -311,14 +311,24 @@ export const progresoAPI = {
 // DIARIO DE GRATITUD
 // ============================================================================
 
+function getFechaLocal() {
+  const hoy = new Date();
+  const y = hoy.getFullYear();
+  const m = String(hoy.getMonth() + 1).padStart(2, "0");
+  const d = String(hoy.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export const diarioAPI = {
   getHoy: async () => {
-    return await request("/diario/hoy");
+    const fecha = getFechaLocal();
+    return await request(`/diario/hoy?fecha=${fecha}`);
   },
   guardar: async (contenido) => {
+    const fecha = getFechaLocal();
     return await request("/diario", {
       method: "POST",
-      body: JSON.stringify({ contenido }),
+      body: JSON.stringify({ contenido, fecha }),
     });
   },
   getHistorial: async (pagina = 1, limite = 20) => {

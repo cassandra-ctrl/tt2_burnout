@@ -21,7 +21,13 @@ async function getPacienteId(userId) {
 router.post(
   "/",
   authenticate.paciente,
-  [body("contenido").trim().notEmpty().withMessage("El contenido es requerido")],
+  [
+    body("contenido").trim().notEmpty().withMessage("El contenido es requerido"),
+    body("fecha")
+      .optional()
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage("Formato de fecha inválido (YYYY-MM-DD)"),
+  ],
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -34,8 +40,9 @@ router.post(
         return res.status(404).json({ error: "Paciente no encontrado" });
       }
 
-      const { contenido } = req.body;
-      const hoy = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const { contenido, fecha } = req.body;
+      // Usar fecha del dispositivo si se envía, de lo contrario la del servidor
+      const hoy = fecha || new Date().toISOString().split("T")[0];
 
       // Verificar si ya existe entrada para hoy
       const entradaExistente = await db.queryOne(
@@ -73,7 +80,7 @@ router.post(
   }
 );
 
-// GET /api/diario/hoy
+// GET /api/diario/hoy?fecha=YYYY-MM-DD
 // Obtener la entrada del día actual (si existe)
 router.get("/hoy", authenticate.paciente, async (req, res) => {
   try {
@@ -82,7 +89,8 @@ router.get("/hoy", authenticate.paciente, async (req, res) => {
       return res.status(404).json({ error: "Paciente no encontrado" });
     }
 
-    const hoy = new Date().toISOString().split("T")[0];
+    // Usar fecha del dispositivo si se envía, de lo contrario la del servidor
+    const hoy = req.query.fecha || new Date().toISOString().split("T")[0];
 
     const entrada = await db.queryOne(
       "SELECT * FROM diario_paciente WHERE id_paciente = ? AND fecha = ?",
