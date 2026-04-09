@@ -154,7 +154,7 @@ export default function HomeScreen({ navigation }) {
 
             <TouchableOpacity
               style={styles.accesoItem}
-              onPress={() => navigation.navigate("Módulos")}
+              onPress={() => navigation.navigate("Logros")}
             >
               <View style={styles.accesoIcono}>
                 <Ionicons name="trophy" size={28} color={AZUL} />

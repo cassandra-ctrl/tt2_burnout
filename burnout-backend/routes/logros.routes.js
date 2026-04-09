@@ -72,6 +72,18 @@ async function verificarYOtorgarLogros(idPaciente) {
   // Calcular racha actual (días consecutivos)
   const rachaActual = await calcularRacha(idPaciente);
 
+  // Entradas en el diario
+  const entradasDiario = await db.queryOne(
+    "SELECT COUNT(*) as total FROM diario_paciente WHERE id_paciente = ?",
+    [idPaciente],
+  );
+
+  // Reflexiones escritas
+  const reflexiones = await db.queryOne(
+    "SELECT COUNT(*) as total FROM reflexiones_paciente WHERE id_paciente = ?",
+    [idPaciente],
+  );
+
   // -------------------------------------------------------------------------
   // Obtener logros que el paciente YA tiene
   // -------------------------------------------------------------------------
@@ -85,6 +97,18 @@ async function verificarYOtorgarLogros(idPaciente) {
   // Verificar cada logro
   // -------------------------------------------------------------------------
 
+  // BRONCE: Diario Debut (1 entrada en diario)
+  if (entradasDiario.total >= 1) {
+    const logro = await otorgarLogroPorNombre("Diario Debut", idPaciente, idsObtenidos);
+    if (logro) logrosOtorgados.push(logro);
+  }
+
+  // BRONCE: Reflexión Inicial (1 reflexión)
+  if (reflexiones.total >= 1) {
+    const logro = await otorgarLogroPorNombre("Reflexión Inicial", idPaciente, idsObtenidos);
+    if (logro) logrosOtorgados.push(logro);
+  }
+
   // BRONCE: Primer Paso (1 actividad)
   if (actividadesCompletadas.total >= 1) {
     const logro = await otorgarLogroPorNombre(
@@ -92,6 +116,12 @@ async function verificarYOtorgarLogros(idPaciente) {
       idPaciente,
       idsObtenidos,
     );
+    if (logro) logrosOtorgados.push(logro);
+  }
+
+  // PLATA: Racha de 5 días
+  if (rachaActual >= 5) {
+    const logro = await otorgarLogroPorNombre("Racha de 5 días", idPaciente, idsObtenidos);
     if (logro) logrosOtorgados.push(logro);
   }
 
