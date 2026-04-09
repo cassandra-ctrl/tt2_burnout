@@ -5,7 +5,6 @@
 // Tutorial → Consentimiento → Aviso Privacidad → Test OLBI → Empecemos → Home
 
 import React from "react";
-import { View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -36,20 +35,11 @@ import ModulosScreen from "../screens/ModulosScreen";
 import DetalleModuloScreen from "../screens/DetalleModuloScreen";
 import ActividadScreen from "../screens/ActividadScreen";
 import DiarioScreen from "../screens/DiarioScreen";
+import PerfilScreen from "../screens/PerfilScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Placeholder temporal para pantallas de fase 3, 4 y 5
-function PlaceholderScreen({ route }) {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#B8C1EC" }}>
-      <Text style={{ fontSize: 18, color: "#1E3A5F", fontWeight: "bold" }}>
-        {route.name} — Próximamente
-      </Text>
-    </View>
-  );
-}
 
 // STACK DE AUTENTICACIÓN (Login, Registro, Recuperar contraseña)
 function AuthStack() {
@@ -93,7 +83,7 @@ function MainTabs() {
       <Tab.Screen name="Inicio"   component={HomeScreen} />
       <Tab.Screen name="Módulos"  component={ModulosScreen} />
       <Tab.Screen name="Diario"   component={DiarioScreen} />
-      <Tab.Screen name="Perfil"   component={PlaceholderScreen} />
+      <Tab.Screen name="Perfil"   component={PerfilScreen} />
     </Tab.Navigator>
   );
 }

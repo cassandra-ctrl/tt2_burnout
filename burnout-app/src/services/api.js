@@ -112,6 +112,14 @@ export const authAPI = {
     await AsyncStorage.removeItem("usuario");
   },
 
+  // Cambiar contraseña
+  changePassword: async (contrasenaActual, contrasenaNueva) => {
+    return await request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ contrasenaActual, contrasenaNueva }),
+    });
+  },
+
   // Verificar código de correo tras registro
   verificarCorreo: async (correo, codigo) => {
     const data = await request("/auth/verificar-correo", {
