@@ -113,7 +113,7 @@ export default function HomeScreen({ navigation }) {
           {moduloActual ? (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => navigation.navigate("DetalleModulo", { modulo: moduloActual })}
+              onPress={() => navigation.navigate("DetalleModulo", { modulo: moduloActual, pacienteId })}
             >
               <Text style={styles.moduloTitulo}>{moduloActual.titulo}</Text>
               <Text style={styles.moduloDescripcion} numberOfLines={2}>

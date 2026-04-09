@@ -32,6 +32,9 @@ import EmpecemosScreen from "../screens/EmpecemosScreen";
 
 // Pantallas principales
 import HomeScreen from "../screens/HomeScreen";
+import ModulosScreen from "../screens/ModulosScreen";
+import DetalleModuloScreen from "../screens/DetalleModuloScreen";
+import ActividadScreen from "../screens/ActividadScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -87,7 +90,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Inicio"   component={HomeScreen} />
-      <Tab.Screen name="Módulos"  component={PlaceholderScreen} />
+      <Tab.Screen name="Módulos"  component={ModulosScreen} />
       <Tab.Screen name="Diario"   component={PlaceholderScreen} />
       <Tab.Screen name="Perfil"   component={PlaceholderScreen} />
     </Tab.Navigator>
@@ -107,7 +110,9 @@ function MainStack() {
       <Stack.Screen name="Empecemos" component={EmpecemosScreen} />
 
       {/* App principal */}
-      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="MainTabs"      component={MainTabs} />
+      <Stack.Screen name="DetalleModulo" component={DetalleModuloScreen} />
+      <Stack.Screen name="Actividad"     component={ActividadScreen} />
     </Stack.Navigator>
   );
 }

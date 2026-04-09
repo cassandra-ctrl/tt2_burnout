@@ -185,11 +185,13 @@ router.get(
       // Actividades del módulo con progreso
       const actividades = await db.query(
         `
-        SELECT 
+        SELECT
           a.id_actividad,
           a.titulo,
+          a.contenido,
           a.orden,
           a.duracion_minutos,
+          a.id_tipo,
           ca.nombre_tipo as tipo_actividad,
           COALESCE(pa.estado, 'pendiente') as estado,
           pa.fecha_inicio,
