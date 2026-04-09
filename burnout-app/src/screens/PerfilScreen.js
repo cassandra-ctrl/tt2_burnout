@@ -12,12 +12,20 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { progresoAPI, authAPI } from "../services/api";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import {
+  solicitarPermisos,
+  programarRecordatorioDiario,
+  cancelarRecordatorioDiario,
+  getConfigRecordatorio,
+} from "../utils/notificaciones";
 
 const AZUL = "#1E3A5F";
 
@@ -33,6 +41,14 @@ export default function PerfilScreen() {
   const [verActual, setVerActual] = useState(false);
   const [verNueva, setVerNueva] = useState(false);
 
+  // Recordatorio diario
+  const [recordatorioActivo, setRecordatorioActivo] = useState(false);
+  const [recordatorioHora, setRecordatorioHora] = useState(20);
+  const [recordatorioMinuto, setRecordatorioMinuto] = useState(0);
+  const [mostrarPickerHora, setMostrarPickerHora] = useState(false);
+  const [horaTemp, setHoraTemp] = useState(20);
+  const [minutoTemp, setMinutoTemp] = useState(0);
+
   const cargarStats = useCallback(async () => {
     try {
       const data = await progresoAPI.getByPaciente(pacienteId);
@@ -44,7 +60,53 @@ export default function PerfilScreen() {
 
   useEffect(() => {
     cargarStats();
+    cargarConfigNotificacion();
   }, [cargarStats]);
+
+  const cargarConfigNotificacion = async () => {
+    const config = await getConfigRecordatorio();
+    if (config.activo) {
+      setRecordatorioActivo(true);
+      setRecordatorioHora(config.hora ?? 20);
+      setRecordatorioMinuto(config.minuto ?? 0);
+    }
+  };
+
+  const handleToggleRecordatorio = async (valor) => {
+    if (valor) {
+      const permiso = await solicitarPermisos();
+      if (!permiso) {
+        Alert.alert(
+          "Permiso requerido",
+          "Para activar el recordatorio necesitas permitir notificaciones en los ajustes de tu dispositivo."
+        );
+        return;
+      }
+      setRecordatorioActivo(true);
+      setHoraTemp(recordatorioHora);
+      setMinutoTemp(recordatorioMinuto);
+      setMostrarPickerHora(true);
+    } else {
+      await cancelarRecordatorioDiario();
+      setRecordatorioActivo(false);
+      Alert.alert("Recordatorio desactivado", "Ya no recibirás recordatorios del diario.");
+    }
+  };
+
+  const handleGuardarHora = async () => {
+    try {
+      await programarRecordatorioDiario(horaTemp, minutoTemp);
+      setRecordatorioHora(horaTemp);
+      setRecordatorioMinuto(minutoTemp);
+      setMostrarPickerHora(false);
+      const h = String(horaTemp).padStart(2, "0");
+      const m = String(minutoTemp).padStart(2, "0");
+      Alert.alert("Recordatorio activado", `Te avisaremos todos los días a las ${h}:${m}.`);
+    } catch (error) {
+      console.error("Error programando notificación:", error);
+      Alert.alert("Error", "No se pudo programar el recordatorio. Verifica que la app tenga permiso de notificaciones.");
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -215,6 +277,43 @@ export default function PerfilScreen() {
 
             <View style={styles.separador} />
 
+            {/* Recordatorio diario */}
+            <View style={styles.opcionRow}>
+              <View style={styles.opcionIcono}>
+                <Ionicons name="notifications-outline" size={20} color={AZUL} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.opcionTexto}>Recordatorio del diario</Text>
+                {recordatorioActivo && (
+                  <Text style={styles.recordatorioHoraTexto}>
+                    {String(recordatorioHora).padStart(2, "0")}:{String(recordatorioMinuto).padStart(2, "0")} h
+                  </Text>
+                )}
+              </View>
+              <Switch
+                value={recordatorioActivo}
+                onValueChange={handleToggleRecordatorio}
+                trackColor={{ false: colors.grayLight, true: AZUL + "80" }}
+                thumbColor={recordatorioActivo ? AZUL : colors.gray}
+              />
+            </View>
+
+            {recordatorioActivo && (
+              <TouchableOpacity
+                style={styles.cambiarHoraBtn}
+                onPress={() => {
+                  setHoraTemp(recordatorioHora);
+                  setMinutoTemp(recordatorioMinuto);
+                  setMostrarPickerHora(true);
+                }}
+              >
+                <Ionicons name="time-outline" size={15} color={AZUL} />
+                <Text style={styles.cambiarHoraTexto}>Cambiar hora</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.separador} />
+
             {/* Cerrar sesión */}
             <TouchableOpacity style={styles.opcionRow} onPress={handleLogout}>
               <View style={[styles.opcionIcono, { backgroundColor: colors.error + "15" }]}>
@@ -231,6 +330,76 @@ export default function PerfilScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingView>
+      {/* Modal selector de hora */}
+      <Modal
+        visible={mostrarPickerHora}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMostrarPickerHora(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitulo}>Hora del recordatorio</Text>
+            <Text style={styles.modalSubtitulo}>
+              Recibirás una notificación diaria a esta hora
+            </Text>
+
+            <View style={styles.pickerRow}>
+              {/* Horas */}
+              <View style={styles.pickerCol}>
+                <TouchableOpacity
+                  style={styles.pickerBtn}
+                  onPress={() => setHoraTemp((h) => (h + 1) % 24)}
+                >
+                  <Ionicons name="chevron-up" size={22} color={AZUL} />
+                </TouchableOpacity>
+                <Text style={styles.pickerValor}>{String(horaTemp).padStart(2, "0")}</Text>
+                <TouchableOpacity
+                  style={styles.pickerBtn}
+                  onPress={() => setHoraTemp((h) => (h - 1 + 24) % 24)}
+                >
+                  <Ionicons name="chevron-down" size={22} color={AZUL} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.pickerSep}>:</Text>
+
+              {/* Minutos (en pasos de 5) */}
+              <View style={styles.pickerCol}>
+                <TouchableOpacity
+                  style={styles.pickerBtn}
+                  onPress={() => setMinutoTemp((m) => (m + 5) % 60)}
+                >
+                  <Ionicons name="chevron-up" size={22} color={AZUL} />
+                </TouchableOpacity>
+                <Text style={styles.pickerValor}>{String(minutoTemp).padStart(2, "0")}</Text>
+                <TouchableOpacity
+                  style={styles.pickerBtn}
+                  onPress={() => setMinutoTemp((m) => (m - 5 + 60) % 60)}
+                >
+                  <Ionicons name="chevron-down" size={22} color={AZUL} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.modalBotones}>
+              <TouchableOpacity
+                style={styles.modalBtnCancelar}
+                onPress={() => {
+                  setMostrarPickerHora(false);
+                  if (!recordatorioActivo) setRecordatorioActivo(false);
+                }}
+              >
+                <Text style={styles.modalBtnCancelarTexto}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtnGuardar} onPress={handleGuardarHora}>
+                <Text style={styles.modalBtnGuardarTexto}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -400,5 +569,114 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: "600",
     fontSize: fonts.sizes.sm,
+  },
+  recordatorioHoraTexto: {
+    fontSize: fonts.sizes.xs,
+    color: AZUL,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  cambiarHoraBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  cambiarHoraTexto: {
+    fontSize: fonts.sizes.xs,
+    color: AZUL,
+    fontWeight: "600",
+  },
+
+  // Modal selector de hora
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: "100%",
+    alignItems: "center",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalTitulo: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 4,
+  },
+  modalSubtitulo: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  pickerCol: {
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  pickerBtn: {
+    padding: spacing.sm,
+    backgroundColor: AZUL + "12",
+    borderRadius: borderRadius.md,
+  },
+  pickerValor: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: AZUL,
+    width: 80,
+    textAlign: "center",
+  },
+  pickerSep: {
+    fontSize: 40,
+    fontWeight: "bold",
+    color: AZUL,
+    marginBottom: 8,
+  },
+  modalBotones: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    width: "100%",
+  },
+  modalBtnCancelar: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.grayLight,
+    alignItems: "center",
+  },
+  modalBtnCancelarTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: "600",
+  },
+  modalBtnGuardar: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: AZUL,
+    alignItems: "center",
+  },
+  modalBtnGuardarTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.white,
+    fontWeight: "600",
   },
 });
