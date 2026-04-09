@@ -36,6 +36,7 @@ import DetalleModuloScreen from "../screens/DetalleModuloScreen";
 import ActividadScreen from "../screens/ActividadScreen";
 import DiarioScreen from "../screens/DiarioScreen";
 import PerfilScreen from "../screens/PerfilScreen";
+import CitasScreen from "../screens/CitasScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -104,6 +105,7 @@ function MainStack() {
       <Stack.Screen name="MainTabs"      component={MainTabs} />
       <Stack.Screen name="DetalleModulo" component={DetalleModuloScreen} />
       <Stack.Screen name="Actividad"     component={ActividadScreen} />
+      <Stack.Screen name="Citas"         component={CitasScreen} />
     </Stack.Navigator>
   );
 }

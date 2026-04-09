@@ -201,13 +201,15 @@ router.get("/mis-citas", authenticate.paciente, async (req, res) => {
 
     //Obtenemos la fecha y la convertimos en texto estandar
     const hoy = new Date().toISOString().split("T")[0];
-    const citasProximas = citas.filter(
-      (c) => c.fecha_cita >= hoy && c.estado === "programada",
-    );
+    const citasProximas = citas.filter((c) => {
+      const fecha = String(c.fecha_cita).split("T")[0];
+      return fecha >= hoy && c.estado === "programada";
+    });
 
-    const citasPasadas = citas.filter(
-      (c) => c.fecha_cita < hoy || c.estado != "programada",
-    );
+    const citasPasadas = citas.filter((c) => {
+      const fecha = String(c.fecha_cita).split("T")[0];
+      return fecha < hoy || c.estado !== "programada";
+    });
 
     res.json({
       total: citas.length,
