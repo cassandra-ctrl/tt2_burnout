@@ -280,9 +280,14 @@ export const actividadesAPI = {
 // ============================================================================
 
 export const progresoAPI = {
-  // Obtener progreso general
-  getGeneral: async () => {
-    return await request("/progreso");
+  // Obtener progreso general del paciente
+  getByPaciente: async (idPaciente) => {
+    return await request(`/progreso/paciente/${idPaciente}`);
+  },
+
+  // Obtener progreso de un módulo específico (incluye estado por actividad)
+  getModuloProgreso: async (moduloId, pacienteId) => {
+    return await request(`/progreso/modulo/${moduloId}/paciente/${pacienteId}`);
   },
 
   // Iniciar actividad
@@ -299,6 +304,41 @@ export const progresoAPI = {
       method: "POST",
       body: JSON.stringify({ id_actividad }),
     });
+  },
+};
+
+// ============================================================================
+// DIARIO DE GRATITUD
+// ============================================================================
+
+export const diarioAPI = {
+  getHoy: async () => {
+    return await request("/diario/hoy");
+  },
+  guardar: async (contenido) => {
+    return await request("/diario", {
+      method: "POST",
+      body: JSON.stringify({ contenido }),
+    });
+  },
+  getHistorial: async (pagina = 1, limite = 20) => {
+    return await request(`/diario?pagina=${pagina}&limite=${limite}`);
+  },
+};
+
+// ============================================================================
+// REFLEXIONES
+// ============================================================================
+
+export const reflexionesAPI = {
+  guardar: async (id_actividad, contenido) => {
+    return await request("/reflexiones", {
+      method: "POST",
+      body: JSON.stringify({ id_actividad, contenido }),
+    });
+  },
+  getByActividad: async (id_actividad) => {
+    return await request(`/reflexiones/actividad/${id_actividad}`);
   },
 };
 
@@ -377,4 +417,6 @@ export default {
   graficas: graficasAPI,
   logros: logrosAPI,
   citas: citasAPI,
+  diario: diarioAPI,
+  reflexiones: reflexionesAPI,
 };

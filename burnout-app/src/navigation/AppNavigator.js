@@ -5,6 +5,7 @@
 // Tutorial → Consentimiento → Aviso Privacidad → Test OLBI → Empecemos → Home
 
 import React from "react";
+import { View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -30,9 +31,21 @@ import ResultadoTestScreen from "../screens/ResultadoTestScreen";
 import EmpecemosScreen from "../screens/EmpecemosScreen";
 
 // Pantallas principales
+import HomeScreen from "../screens/HomeScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Placeholder temporal para pantallas de fase 3, 4 y 5
+function PlaceholderScreen({ route }) {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#B8C1EC" }}>
+      <Text style={{ fontSize: 18, color: "#1E3A5F", fontWeight: "bold" }}>
+        {route.name} — Próximamente
+      </Text>
+    </View>
+  );
+}
 
 // STACK DE AUTENTICACIÓN (Login, Registro, Recuperar contraseña)
 function AuthStack() {
@@ -40,10 +53,7 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Registro" component={RegisterScreen} />
-      <Stack.Screen
-        name="RecuperarPassword"
-        component={RecuperarPasswordScreen}
-      />
+      <Stack.Screen name="RecuperarPassword" component={RecuperarPasswordScreen} />
       <Stack.Screen name="VerificarCodigo" component={VerificarCodigoScreen} />
       <Stack.Screen name="NuevaContrasena" component={NuevaContrasenaScreen} />
       <Stack.Screen name="VerificacionCorreo" component={VerificacionCorreoScreen} />
@@ -51,37 +61,35 @@ function AuthStack() {
   );
 }
 
-// TABS PRINCIPALES (Home, Módulos, Perfil)
+// TABS PRINCIPALES (Inicio, Módulos, Diario, Perfil)
 function MainTabs() {
+  const ICONS = {
+    Inicio:   ["home",         "home-outline"],
+    Módulos:  ["library",      "library-outline"],
+    Diario:   ["journal",      "journal-outline"],
+    Perfil:   ["person-circle","person-circle-outline"],
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === "Inicio") {
-            iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "Módulos") {
-            iconName = focused ? "book" : "book-outline";
-          } else if (route.name === "Yo") {
-            iconName = focused ? "person" : "person-outline";
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          const [active, inactive] = ICONS[route.name] || ["ellipse", "ellipse-outline"];
+          return <Ionicons name={focused ? active : inactive} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: "#1E3A5F",
         tabBarInactiveTintColor: colors.gray,
         tabBarStyle: {
-          paddingBottom: 5,
           paddingTop: 5,
-          height: 60,
+          height: 80,
         },
       })}
     >
-      <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Módulos" component={HomeScreen} />
-      <Tab.Screen name="Yo" component={HomeScreen} />
+      <Tab.Screen name="Inicio"   component={HomeScreen} />
+      <Tab.Screen name="Módulos"  component={PlaceholderScreen} />
+      <Tab.Screen name="Diario"   component={PlaceholderScreen} />
+      <Tab.Screen name="Perfil"   component={PlaceholderScreen} />
     </Tab.Navigator>
   );
 }
@@ -92,10 +100,7 @@ function MainStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {/* Onboarding / Tutorial */}
       <Stack.Screen name="Tutorial" component={TutorialScreen} />
-      <Stack.Screen
-        name="ConsentimientoInformado"
-        component={ConsentimientoScreen}
-      />
+      <Stack.Screen name="ConsentimientoInformado" component={ConsentimientoScreen} />
       <Stack.Screen name="AvisoPrivacidad" component={AvisoPrivacidadScreen} />
       <Stack.Screen name="TestOLBI" component={TestOLBIScreen} />
       <Stack.Screen name="ResultadoTest" component={ResultadoTestScreen} />
