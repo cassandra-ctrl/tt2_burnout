@@ -100,6 +100,16 @@ function parsearRedireccionDiario(texto) {
   }
 }
 
+function parsearFormularioCampos(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "formulario_campos") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -163,7 +173,8 @@ export default function ActividadScreen({ navigation, route }) {
   const formularioPlan   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling ? parsearFormularioPlan(actividad.contenido) : null;
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
   const cajaHerramientas  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
-  const redireccionDiario = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
+  const redireccionDiario  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
+  const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearFormularioCampos(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -224,6 +235,9 @@ export default function ActividadScreen({ navigation, route }) {
   const numItems = listaReflexion?.num_items || 5;
   const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
   const listaCompleta = items.every((it) => it.trim());
+
+  const [camposValores, setCamposValores] = useState({});
+  const camposCompletos = (formularioCampos?.campos || []).every((c) => camposValores[c.id]?.trim());
 
   const [seleccionadas, setSeleccionadas] = useState(new Set());
   const minSeleccion = cajaHerramientas?.min_seleccion || 3;
@@ -318,6 +332,38 @@ export default function ActividadScreen({ navigation, route }) {
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "No se pudo guardar la reflexión");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
+
+  const handleGuardarCampos = async () => {
+    if (!camposCompletos) {
+      Alert.alert("Espera", "Completa todos los campos antes de guardar.");
+      return;
+    }
+    const contenido = (formularioCampos?.campos || [])
+      .map((c) => `${c.label}:\n${camposValores[c.id].trim()}`)
+      .join("\n\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu registro se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar");
     } finally {
       setGuardandoReflexion(false);
     }
@@ -955,6 +1001,57 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : formularioCampos ? (
+              completada ? (
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Registro guardado
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Registro TCC</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{formularioCampos.instrucciones}</Text>
+
+                  {formularioCampos.campos.map((campo, i) => (
+                    <View key={campo.id} style={styles.campoContainer}>
+                      <View style={styles.campoLabelRow}>
+                        <View style={styles.campoNumero}>
+                          <Text style={styles.parNumeroTexto}>{i + 1}</Text>
+                        </View>
+                        <Text style={styles.campoLabel}>{campo.label}</Text>
+                      </View>
+                      <TextInput
+                        style={styles.campoInput}
+                        value={camposValores[campo.id] || ""}
+                        onChangeText={(v) =>
+                          setCamposValores((prev) => ({ ...prev, [campo.id]: v }))
+                        }
+                        placeholder={campo.placeholder}
+                        placeholderTextColor={colors.gray}
+                        multiline
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  ))}
+
+                  <Button
+                    title="Guardar registro"
+                    onPress={handleGuardarCampos}
+                    loading={guardandoReflexion}
+                    style={[styles.botonCompletar, { opacity: camposCompletos ? 1 : 0.4 }]}
+                    disabled={!camposCompletos}
+                  />
+                </View>
+              )
             ) : redireccionDiario ? (
               <View style={styles.card}>
                 <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
@@ -988,7 +1085,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -1001,7 +1098,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -1041,7 +1138,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1456,6 +1553,37 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
+  },
+  campoContainer: {
+    marginBottom: spacing.md,
+  },
+  campoLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  campoNumero: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: AZUL,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  campoLabel: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: "700",
+    color: AZUL,
+  },
+  campoInput: {
+    borderWidth: 1,
+    borderColor: colors.grayLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    minHeight: 72,
   },
   botonDiario: {
     flexDirection: "row",
