@@ -5,6 +5,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "recordatorio_diario_config";
+const NOTIF_ID_KEY = "recordatorio_diario_id";
 
 // Cómo mostrar notificaciones cuando la app está en primer plano
 Notifications.setNotificationHandler({
@@ -26,10 +27,18 @@ export async function solicitarPermisos() {
 
 // Programar recordatorio diario a la hora elegida
 export async function programarRecordatorioDiario(hora, minuto) {
-  // Cancelar cualquier recordatorio previo antes de crear uno nuevo
+  // Cancelar por ID guardado (más fiable que cancelAll)
+  try {
+    const idGuardado = await AsyncStorage.getItem(NOTIF_ID_KEY);
+    if (idGuardado) {
+      await Notifications.cancelScheduledNotificationAsync(idGuardado);
+    }
+  } catch (_) {}
+
+  // Por si acaso, cancelar todas las pendientes también
   await Notifications.cancelAllScheduledNotificationsAsync();
 
-  await Notifications.scheduleNotificationAsync({
+  const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: "📔 Diario de gratitud",
       body: "¿Ya escribiste lo que agradeces hoy?",
@@ -42,6 +51,8 @@ export async function programarRecordatorioDiario(hora, minuto) {
     },
   });
 
+  // Guardar el ID de la notificación agendada
+  await AsyncStorage.setItem(NOTIF_ID_KEY, id);
   await AsyncStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ hora, minuto, activo: true })
@@ -50,7 +61,15 @@ export async function programarRecordatorioDiario(hora, minuto) {
 
 // Cancelar el recordatorio
 export async function cancelarRecordatorioDiario() {
+  try {
+    const idGuardado = await AsyncStorage.getItem(NOTIF_ID_KEY);
+    if (idGuardado) {
+      await Notifications.cancelScheduledNotificationAsync(idGuardado);
+    }
+  } catch (_) {}
+
   await Notifications.cancelAllScheduledNotificationsAsync();
+  await AsyncStorage.removeItem(NOTIF_ID_KEY);
   await AsyncStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ activo: false })
