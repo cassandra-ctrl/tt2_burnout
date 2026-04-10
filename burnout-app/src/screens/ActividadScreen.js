@@ -90,6 +90,16 @@ function parsearCajaHerramientas(texto) {
   }
 }
 
+function parsearRedireccionDiario(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "redireccion_diario") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -152,7 +162,8 @@ export default function ActividadScreen({ navigation, route }) {
   const journaling       = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
   const formularioPlan   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling ? parsearFormularioPlan(actividad.contenido) : null;
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
-  const cajaHerramientas = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
+  const cajaHerramientas  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
+  const redireccionDiario = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -310,6 +321,20 @@ export default function ActividadScreen({ navigation, route }) {
     } finally {
       setGuardandoReflexion(false);
     }
+  };
+
+  const handleAbrirDiario = async () => {
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await refrescarPendientes();
+    } else {
+      try {
+        await progresoAPI.completarActividad(actividad.id_actividad);
+      } catch (_) {}
+    }
+    setCompletada(true);
+    navigation.navigate("MainTabs", { screen: "Diario" });
   };
 
   const handleGuardarCaja = async () => {
@@ -930,6 +955,31 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : redireccionDiario ? (
+              <View style={styles.card}>
+                <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                  <Text style={{ fontSize: 56 }}>📔</Text>
+                  <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                    Diario de gratitud
+                  </Text>
+                  <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                    {redireccionDiario.mensaje}
+                  </Text>
+                  {completada ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.sm }}>
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                      <Text style={{ fontSize: fonts.sizes.sm, color: colors.success, fontWeight: "600" }}>
+                        Actividad completada
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.botonDiario} onPress={handleAbrirDiario}>
+                      <Ionicons name="journal" size={18} color={colors.white} />
+                      <Text style={styles.botonDiarioTexto}>Abrir Diario</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -938,7 +988,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -951,7 +1001,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -991,7 +1041,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1406,5 +1456,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
+  },
+  botonDiario: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: AZUL,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.md,
+  },
+  botonDiarioTexto: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: fonts.sizes.md,
   },
 });
