@@ -70,6 +70,16 @@ function parsearFormularioPlan(texto) {
   }
 }
 
+function parsearListaReflexion(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "lista_reflexion") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -131,6 +141,7 @@ export default function ActividadScreen({ navigation, route }) {
   const distorsiones = !videoId && !esLectura && !cuestionario ? parsearDistorsiones(actividad.contenido) : null;
   const journaling       = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
   const formularioPlan   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling ? parsearFormularioPlan(actividad.contenido) : null;
+  const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -187,6 +198,10 @@ export default function ActividadScreen({ navigation, route }) {
     Array.from({ length: numPares }, () => ({ senal: "", accion: "" }))
   );
   const planCompleto = pares.every((p) => p.senal.trim() && p.accion.trim());
+
+  const numItems = listaReflexion?.num_items || 5;
+  const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
+  const listaCompleta = items.every((it) => it.trim());
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
   const [completada, setCompletada] = useState(yaCompletada);
@@ -269,6 +284,39 @@ export default function ActividadScreen({ navigation, route }) {
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "No se pudo guardar la reflexión");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
+
+  const handleGuardarLista = async () => {
+    if (!listaCompleta) {
+      Alert.alert("Espera", `Completa los ${numItems} campos antes de guardar.`);
+      return;
+    }
+    const label = listaReflexion?.label_item || "Ítem";
+    const contenido = items
+      .map((it, i) => `${label} ${i + 1}: ${it.trim()}`)
+      .join("\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu reflexión se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar");
     } finally {
       setGuardandoReflexion(false);
     }
@@ -715,6 +763,56 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : listaReflexion ? (
+              completada ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      ¡Reflexión guardada!
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                /* ── LISTA DE ITEMS ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>{listaReflexion.label_item}s</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{listaReflexion.instrucciones}</Text>
+
+                  {items.map((valor, i) => (
+                    <View key={i} style={styles.itemRow}>
+                      <View style={styles.parNumero}>
+                        <Text style={styles.parNumeroTexto}>{i + 1}</Text>
+                      </View>
+                      <TextInput
+                        style={[styles.planInput, { flex: 1 }]}
+                        value={valor}
+                        onChangeText={(v) =>
+                          setItems((prev) => prev.map((it, j) => j === i ? v : it))
+                        }
+                        placeholder={listaReflexion.placeholder || `${listaReflexion.label_item} ${i + 1}...`}
+                        placeholderTextColor={colors.gray}
+                        multiline
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  ))}
+
+                  <Button
+                    title="Guardar reflexión"
+                    onPress={handleGuardarLista}
+                    loading={guardandoReflexion}
+                    style={[styles.botonCompletar, { opacity: listaCompleta ? 1 : 0.4 }]}
+                    disabled={!listaCompleta}
+                  />
+                </View>
+              )
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -723,7 +821,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -736,7 +834,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -776,7 +874,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1148,5 +1246,11 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.sm,
     color: colors.text,
     minHeight: 64,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
 });
