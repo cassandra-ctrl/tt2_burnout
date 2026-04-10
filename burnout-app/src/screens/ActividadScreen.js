@@ -30,6 +30,39 @@ function esUrlWeb(texto) {
   return texto.startsWith("http://") || texto.startsWith("https://");
 }
 
+function parsearCuestionario(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "cuestionario_sintomas") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+const ESCALA = [
+  { valor: 0, label: "Nunca" },
+  { valor: 1, label: "Pocas veces" },
+  { valor: 2, label: "Frecuentemente" },
+  { valor: 3, label: "Siempre" },
+];
+
+const DIM_COLORES = {
+  agotamiento:      "#4A90D9",
+  despersonalizacion: "#7B68EE",
+  realizacion:      "#E8875A",
+};
+
+const DIM_NIVELES = [
+  { max: 30,  label: "En equilibrio",    fondo: "#EAF4FF" },
+  { max: 60,  label: "Área de atención", fondo: "#F3F0FF" },
+  { max: 100, label: "Requiere cuidado", fondo: "#FFF3EE" },
+];
+
+function nivelDimension(porcentaje) {
+  return DIM_NIVELES.find((n) => porcentaje <= n.max) || DIM_NIVELES[2];
+}
+
 // Extrae el video ID de cualquier formato de URL de YouTube
 function extraerVideoId(url) {
   if (!url || typeof url !== "string") return null;
@@ -64,6 +97,27 @@ export default function ActividadScreen({ navigation, route }) {
   const yaCompletada = actividad.estado === "completada";
   const videoId = extraerVideoId(actividad.contenido);
   const esLectura = !videoId && esUrlWeb(actividad.contenido);
+  const cuestionario = !videoId && !esLectura ? parsearCuestionario(actividad.contenido) : null;
+
+  // Estado del cuestionario
+  const [respuestas, setRespuestas] = useState({});
+  const [mostrarResultados, setMostrarResultados] = useState(false);
+
+  const calcularResultados = () => {
+    if (!cuestionario) return [];
+    return cuestionario.dimensiones.map((dim) => {
+      const max = dim.preguntas.length * 3;
+      const suma = dim.preguntas.reduce((acc, p) => acc + (respuestas[p.id] ?? 0), 0);
+      const porcentaje = Math.round((suma / max) * 100);
+      return { ...dim, porcentaje, nivel: nivelDimension(porcentaje) };
+    });
+  };
+
+  const cuestionarioCompleto = cuestionario
+    ? cuestionario.dimensiones.every((dim) =>
+        dim.preguntas.every((p) => respuestas[p.id] !== undefined)
+      )
+    : false;
 
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
@@ -211,6 +265,89 @@ export default function ActividadScreen({ navigation, route }) {
                   <Text style={styles.botonLecturaTexto}>Abrir artículo</Text>
                 </TouchableOpacity>
               </View>
+            ) : cuestionario ? (
+              completada && !mostrarResultados ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Ya completaste esta evaluación
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center", marginTop: spacing.sm }]}>
+                      Recuerda hablar con tu psicólogo/a sobre lo que encontraste en esta autoevaluación.
+                    </Text>
+                  </View>
+                </View>
+              ) : mostrarResultados ? (
+                /* ── RESULTADOS ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Tus resultados</Text>
+                  <Text style={styles.cuestionarioInstruccion}>
+                    Así se distribuyen las áreas que exploramos hoy:
+                  </Text>
+                  {calcularResultados().map((dim) => {
+                    const color = DIM_COLORES[dim.id] || "#4A90D9";
+                    return (
+                      <View key={dim.id} style={[styles.dimResultado, { backgroundColor: dim.nivel.fondo }]}>
+                        <View style={styles.dimResultadoHeader}>
+                          <Text style={styles.dimLabel}>{dim.label}</Text>
+                          <Text style={[styles.dimNivel, { color }]}>{dim.nivel.label}</Text>
+                        </View>
+                        <View style={styles.barraFondo}>
+                          <View style={[styles.barraRelleno, { width: `${dim.porcentaje}%`, backgroundColor: color }]} />
+                        </View>
+                        <Text style={styles.dimPorcentaje}>{dim.porcentaje}%</Text>
+                      </View>
+                    );
+                  })}
+                  <Text style={styles.resultadoNota}>
+                    Recuerda que estos resultados son solo un punto de partida para reflexionar. Habla con tu psicólogo/a sobre lo que encontraste.
+                  </Text>
+                </View>
+              ) : (
+                /* ── PREGUNTAS ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Autoevaluación</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{cuestionario.instruccion}</Text>
+                  {cuestionario.dimensiones.map((dim) => (
+                    <View key={dim.id}>
+                      <Text style={styles.dimTitulo}>{dim.label}</Text>
+                      {dim.preguntas.map((pregunta) => (
+                        <View key={pregunta.id} style={styles.preguntaWrap}>
+                          <Text style={styles.preguntaTexto}>{pregunta.id}. {pregunta.texto}</Text>
+                          <View style={styles.escalaRow}>
+                            {ESCALA.map((op) => {
+                              const seleccionada = respuestas[pregunta.id] === op.valor;
+                              const color = DIM_COLORES[dim.id] || "#4A90D9";
+                              return (
+                                <TouchableOpacity
+                                  key={op.valor}
+                                  style={[
+                                    styles.escalaBtn,
+                                    seleccionada && { backgroundColor: color, borderColor: color },
+                                  ]}
+                                  onPress={() => setRespuestas((prev) => ({ ...prev, [pregunta.id]: op.valor }))}
+                                >
+                                  <Text style={[styles.escalaBtnTexto, seleccionada && { color: "#fff" }]}>
+                                    {op.label}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                  <Button
+                    title="Ver resultados"
+                    onPress={() => setMostrarResultados(true)}
+                    style={[styles.botonCompletar, { opacity: cuestionarioCompleto ? 1 : 0.4 }]}
+                    disabled={!cuestionarioCompleto}
+                  />
+                </View>
+              )
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -413,5 +550,92 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: "600",
     fontSize: fonts.sizes.sm,
+  },
+  cuestionarioInstruccion: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  dimTitulo: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: "700",
+    color: AZUL,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayLight,
+    paddingBottom: spacing.xs,
+  },
+  preguntaWrap: {
+    marginBottom: spacing.md,
+  },
+  preguntaTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  escalaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  escalaBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: colors.grayLight,
+    backgroundColor: colors.white,
+  },
+  escalaBtnTexto: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  dimResultado: {
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  dimResultadoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  dimLabel: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  dimNivel: {
+    fontSize: fonts.sizes.xs,
+    fontWeight: "600",
+  },
+  barraFondo: {
+    height: 8,
+    backgroundColor: colors.grayLight,
+    borderRadius: borderRadius.full,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  barraRelleno: {
+    height: "100%",
+    borderRadius: borderRadius.full,
+  },
+  dimPorcentaje: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    textAlign: "right",
+  },
+  resultadoNota: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+    marginTop: spacing.md,
+    lineHeight: 18,
+    textAlign: "center",
   },
 });
