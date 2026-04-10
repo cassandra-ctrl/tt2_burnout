@@ -14,6 +14,7 @@ import {
   Platform,
   useWindowDimensions,
   Linking,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -100,6 +101,16 @@ function parsearRedireccionDiario(texto) {
   }
 }
 
+function parsearRespiracion(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "respiracion_guiada") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function parsearFormularioCampos(texto) {
   try {
     const obj = JSON.parse(texto);
@@ -174,7 +185,8 @@ export default function ActividadScreen({ navigation, route }) {
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
   const cajaHerramientas  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
   const redireccionDiario  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
-  const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearFormularioCampos(actividad.contenido) : null;
+  const respiracion        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearRespiracion(actividad.contenido) : null;
+  const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !respiracion ? parsearFormularioCampos(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -235,6 +247,59 @@ export default function ActividadScreen({ navigation, route }) {
   const numItems = listaReflexion?.num_items || 5;
   const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
   const listaCompleta = items.every((it) => it.trim());
+
+  // Estado respiración guiada
+  const respAnimVal = useRef(new Animated.Value(0)).current;
+  const shouldStopRef = useRef(false);
+  const [respFase, setRespFase] = useState(null);
+  const [respCiclo, setRespCiclo] = useState(1);
+  const [respActivo, setRespActivo] = useState(false);
+  const [respTerminado, setRespTerminado] = useState(false);
+
+  useEffect(() => {
+    return () => { shouldStopRef.current = true; };
+  }, []);
+
+  const iniciarRespiracion = () => {
+    if (!respiracion) return;
+    shouldStopRef.current = false;
+    setRespActivo(true);
+    setRespTerminado(false);
+    setRespCiclo(1);
+    respAnimVal.setValue(0);
+    const fases = respiracion.fases;
+    const totalCiclos = respiracion.ciclos;
+
+    const runPhase = (idx, ciclo) => {
+      if (shouldStopRef.current) return;
+      const f = fases[idx];
+      setRespFase(f);
+      Animated.timing(respAnimVal, {
+        toValue: f.valor,
+        duration: f.duracion * 1000,
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (!finished || shouldStopRef.current) return;
+        const nextIdx = (idx + 1) % fases.length;
+        const nextCiclo = nextIdx === 0 ? ciclo + 1 : ciclo;
+        if (nextIdx === 0) setRespCiclo(nextCiclo);
+        if (nextIdx === 0 && nextCiclo > totalCiclos) {
+          setRespTerminado(true);
+          setRespActivo(false);
+          return;
+        }
+        runPhase(nextIdx, nextCiclo);
+      });
+    };
+    runPhase(0, 1);
+  };
+
+  const detenerRespiracion = () => {
+    shouldStopRef.current = true;
+    respAnimVal.stopAnimation();
+    setRespActivo(false);
+    setRespFase(null);
+  };
 
   const [camposValores, setCamposValores] = useState({});
   const camposCompletos = (formularioCampos?.campos || []).every((c) => camposValores[c.id]?.trim());
@@ -1001,6 +1066,84 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : respiracion ? (
+              <View style={styles.card}>
+                {/* Cabecera */}
+                <Text style={styles.cardTitulo}>Respiración guiada</Text>
+                <Text style={styles.cuestionarioInstruccion}>
+                  Sigue el ritmo del círculo. {respiracion.ciclos} ciclos completos.
+                </Text>
+
+                {/* Círculo animado */}
+                <View style={styles.respContainer}>
+                  <Animated.View
+                    style={[
+                      styles.respCirculo,
+                      {
+                        transform: [{
+                          scale: respAnimVal.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.65, 1],
+                          }),
+                        }],
+                        backgroundColor: respAnimVal.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ["#B8D4F0", "#1E3A5F"],
+                        }),
+                      },
+                    ]}
+                  >
+                    <Text style={styles.respFaseTexto}>
+                      {respFase?.nombre || (respTerminado ? "✓" : "•")}
+                    </Text>
+                    {respFase && (
+                      <Text style={styles.respDuracionTexto}>{respFase.duracion}s</Text>
+                    )}
+                  </Animated.View>
+                </View>
+
+                {/* Contador de ciclos */}
+                {respActivo && (
+                  <Text style={styles.respCicloTexto}>
+                    Ciclo {respCiclo} de {respiracion.ciclos}
+                  </Text>
+                )}
+
+                {/* Botones de control */}
+                {!respTerminado && !completada && (
+                  <TouchableOpacity
+                    style={[styles.respBoton, respActivo && styles.respBotonDetener]}
+                    onPress={respActivo ? detenerRespiracion : iniciarRespiracion}
+                  >
+                    <Ionicons
+                      name={respActivo ? "stop-circle" : "play-circle"}
+                      size={20}
+                      color={colors.white}
+                    />
+                    <Text style={styles.respBotonTexto}>
+                      {respActivo ? "Pausar" : "Comenzar"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Completado */}
+                {(respTerminado || completada) && (
+                  <View style={{ alignItems: "center", marginTop: spacing.md }}>
+                    <Text style={{ fontSize: 40 }}>🌿</Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.sm }]}>
+                      {completada && !respTerminado ? "Ya completaste este ejercicio" : "¡Ejercicio completado!"}
+                    </Text>
+                    {!completada && (
+                      <Button
+                        title="Marcar como completada"
+                        onPress={handleCompletar}
+                        loading={completando}
+                        style={[styles.botonCompletar, { marginTop: spacing.md }]}
+                      />
+                    )}
+                  </View>
+                )}
+              </View>
             ) : formularioCampos ? (
               completada ? (
                 <View style={styles.card}>
@@ -1085,7 +1228,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -1098,7 +1241,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -1138,7 +1281,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1553,6 +1696,59 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
+  },
+  respContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+  },
+  respCirculo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: AZUL,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  respFaseTexto: {
+    color: colors.white,
+    fontSize: 22,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  respDuracionTexto: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: fonts.sizes.sm,
+    marginTop: 4,
+  },
+  respCicloTexto: {
+    textAlign: "center",
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  respBoton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: AZUL,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    alignSelf: "center",
+  },
+  respBotonDetener: {
+    backgroundColor: "#E8875A",
+  },
+  respBotonTexto: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: fonts.sizes.md,
   },
   campoContainer: {
     marginBottom: spacing.md,
