@@ -101,6 +101,16 @@ function parsearRedireccionDiario(texto) {
   }
 }
 
+function parsearReescritura(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "reescritura") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function parsearRespiracion(texto) {
   try {
     const obj = JSON.parse(texto);
@@ -185,7 +195,8 @@ export default function ActividadScreen({ navigation, route }) {
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
   const cajaHerramientas  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
   const redireccionDiario  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
-  const respiracion        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearRespiracion(actividad.contenido) : null;
+  const reescritura        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearReescritura(actividad.contenido) : null;
+  const respiracion        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !reescritura ? parsearRespiracion(actividad.contenido) : null;
   const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !respiracion ? parsearFormularioCampos(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
@@ -247,6 +258,51 @@ export default function ActividadScreen({ navigation, route }) {
   const numItems = listaReflexion?.num_items || 5;
   const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
   const listaCompleta = items.every((it) => it.trim());
+
+  // Estado reescritura
+  const [reescIdx, setReescIdx] = useState(0);
+  const [reescTextos, setReescTextos] = useState(() =>
+    Array.from({ length: reescritura?.pensamientos?.length || 0 }, () => "")
+  );
+  const reescTotal = reescritura?.pensamientos?.length || 0;
+  const reescTerminado = reescIdx >= reescTotal;
+  const reescActualCompleto = reescTextos[reescIdx]?.trim().length > 0;
+
+  const handleSiguienteReesc = () => {
+    if (reescIdx + 1 >= reescTotal) {
+      setReescIdx(reescTotal); // marca terminado
+    } else {
+      setReescIdx((i) => i + 1);
+    }
+  };
+
+  const handleGuardarReescritura = async () => {
+    const contenido = reescritura.pensamientos
+      .map((p, i) => `Pensamiento:\n"${p}"\n\nRescritura:\n${reescTextos[i].trim()}`)
+      .join("\n\n---\n\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu ejercicio se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
 
   // Estado respiración guiada
   const respAnimVal = useRef(new Animated.Value(0)).current;
@@ -1066,6 +1122,90 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : reescritura ? (
+              completada ? (
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      ¡Ejercicio completado!
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                      Has practicado reescribir pensamientos de forma más compasiva.
+                    </Text>
+                  </View>
+                </View>
+              ) : reescTerminado ? (
+                /* ── RESUMEN FINAL ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.sm }}>
+                    <Text style={{ fontSize: 48 }}>✍️</Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      ¡Completaste los {reescTotal} pensamientos!
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                      Reescribir pensamientos es una habilidad que mejora con la práctica.
+                    </Text>
+                  </View>
+                  <Button
+                    title="Guardar ejercicio"
+                    onPress={handleGuardarReescritura}
+                    loading={guardandoReflexion}
+                    style={styles.botonCompletar}
+                  />
+                </View>
+              ) : (
+                /* ── PENSAMIENTO ACTUAL ── */
+                <View style={styles.card}>
+                  {/* Progreso */}
+                  <View style={styles.quizProgreso}>
+                    <Text style={styles.quizProgresoTexto}>
+                      Pensamiento {reescIdx + 1} de {reescTotal}
+                    </Text>
+                    <View style={styles.barraFondo}>
+                      <View style={[styles.barraRelleno, {
+                        width: `${((reescIdx) / reescTotal) * 100}%`,
+                        backgroundColor: "#7B68EE",
+                      }]} />
+                    </View>
+                  </View>
+
+                  <Text style={styles.cuestionarioInstruccion}>{reescritura.instrucciones}</Text>
+
+                  {/* Pensamiento negativo */}
+                  <View style={styles.reescPensamientoCard}>
+                    <Text style={styles.reescPensamientoLabel}>Pensamiento original</Text>
+                    <Text style={styles.reescPensamientoTexto}>
+                      "{reescritura.pensamientos[reescIdx]}"
+                    </Text>
+                  </View>
+
+                  {/* Input reescritura */}
+                  <Text style={styles.reescInputLabel}>Tu versión más equilibrada</Text>
+                  <TextInput
+                    style={styles.journalingInput}
+                    value={reescTextos[reescIdx]}
+                    onChangeText={(v) =>
+                      setReescTextos((prev) => prev.map((t, i) => i === reescIdx ? v : t))
+                    }
+                    placeholder="Reescribe este pensamiento de forma más compasiva..."
+                    placeholderTextColor={colors.gray}
+                    multiline
+                    textAlignVertical="top"
+                    onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)}
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.btnSiguiente, !reescActualCompleto && { opacity: 0.4 }]}
+                    onPress={handleSiguienteReesc}
+                    disabled={!reescActualCompleto}
+                  >
+                    <Text style={styles.btnSiguienteTexto}>
+                      {reescIdx + 1 < reescTotal ? "Siguiente →" : "Ver resumen"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )
             ) : respiracion ? (
               <View style={styles.card}>
                 {/* Cabecera */}
@@ -1228,7 +1368,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -1241,7 +1381,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -1281,7 +1421,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1696,6 +1836,36 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
+  },
+  reescPensamientoCard: {
+    backgroundColor: "#FFF3EE",
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: "#E8875A",
+  },
+  reescPensamientoLabel: {
+    fontSize: fonts.sizes.xs,
+    fontWeight: "700",
+    color: "#E8875A",
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  reescPensamientoTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
+  reescInputLabel: {
+    fontSize: fonts.sizes.xs,
+    fontWeight: "700",
+    color: "#7B68EE",
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   respContainer: {
     alignItems: "center",
