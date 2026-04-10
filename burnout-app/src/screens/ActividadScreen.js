@@ -60,6 +60,16 @@ function parsearJournaling(texto) {
   }
 }
 
+function parsearFormularioPlan(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "formulario_plan") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -119,7 +129,8 @@ export default function ActividadScreen({ navigation, route }) {
   const esLectura = !videoId && esUrlWeb(actividad.contenido);
   const cuestionario = !videoId && !esLectura ? parsearCuestionario(actividad.contenido) : null;
   const distorsiones = !videoId && !esLectura && !cuestionario ? parsearDistorsiones(actividad.contenido) : null;
-  const journaling   = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
+  const journaling       = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
+  const formularioPlan   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling ? parsearFormularioPlan(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -169,6 +180,13 @@ export default function ActividadScreen({ navigation, route }) {
     : false;
 
   const scrollViewRef = useRef(null);
+
+  // Estado para formulario_plan
+  const numPares = formularioPlan?.num_pares || 3;
+  const [pares, setPares] = useState(() =>
+    Array.from({ length: numPares }, () => ({ senal: "", accion: "" }))
+  );
+  const planCompleto = pares.every((p) => p.senal.trim() && p.accion.trim());
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
   const [completada, setCompletada] = useState(yaCompletada);
@@ -251,6 +269,40 @@ export default function ActividadScreen({ navigation, route }) {
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "No se pudo guardar la reflexión");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
+
+  const handleGuardarPlan = async () => {
+    if (!planCompleto) {
+      Alert.alert("Espera", "Completa todas las señales y acciones antes de guardar.");
+      return;
+    }
+    const contenido = pares
+      .map((p, i) =>
+        `Señal ${i + 1}: ${p.senal.trim()}\nAcción: ${p.accion.trim()}`
+      )
+      .join("\n\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu plan se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar el plan");
     } finally {
       setGuardandoReflexion(false);
     }
@@ -596,6 +648,73 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : formularioPlan ? (
+              completada ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Tu plan de acción está guardado
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                /* ── FORMULARIO ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Plan de acción</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{formularioPlan.instrucciones}</Text>
+
+                  {pares.map((par, i) => (
+                    <View key={i} style={styles.parContainer}>
+                      <View style={styles.parNumero}>
+                        <Text style={styles.parNumeroTexto}>{i + 1}</Text>
+                      </View>
+
+                      <View style={styles.parCampos}>
+                        <Text style={styles.parLabel}>Señal de alarma</Text>
+                        <TextInput
+                          style={styles.planInput}
+                          value={par.senal}
+                          onChangeText={(v) =>
+                            setPares((prev) => prev.map((p, j) => j === i ? { ...p, senal: v } : p))
+                          }
+                          placeholder="Ej: Me siento irritable sin razón..."
+                          placeholderTextColor={colors.gray}
+                          multiline
+                          textAlignVertical="top"
+                        />
+
+                        <Text style={[styles.parLabel, { marginTop: spacing.sm }]}>Acción que tomaré</Text>
+                        <TextInput
+                          style={styles.planInput}
+                          value={par.accion}
+                          onChangeText={(v) =>
+                            setPares((prev) => prev.map((p, j) => j === i ? { ...p, accion: v } : p))
+                          }
+                          placeholder="Ej: Haré 10 minutos de respiración..."
+                          placeholderTextColor={colors.gray}
+                          multiline
+                          textAlignVertical="top"
+                        />
+                      </View>
+                    </View>
+                  ))}
+
+                  <Button
+                    title="Guardar mi plan"
+                    onPress={handleGuardarPlan}
+                    loading={guardandoReflexion}
+                    style={[styles.botonCompletar, { opacity: planCompleto ? 1 : 0.4 }]}
+                    disabled={!planCompleto}
+                  />
+                </View>
+              )
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -604,7 +723,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -617,7 +736,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && (
+            {mostrarReflexion && !journaling && !formularioPlan && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -657,7 +776,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -992,5 +1111,42 @@ const styles = StyleSheet.create({
     color: colors.gray,
     textAlign: "right",
     marginBottom: spacing.md,
+  },
+  parContainer: {
+    flexDirection: "row",
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  parNumero: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: AZUL,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  parNumeroTexto: {
+    color: colors.white,
+    fontWeight: "bold",
+    fontSize: fonts.sizes.sm,
+  },
+  parCampos: { flex: 1 },
+  parLabel: {
+    fontSize: fonts.sizes.xs,
+    fontWeight: "700",
+    color: AZUL,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  planInput: {
+    borderWidth: 1,
+    borderColor: colors.grayLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    minHeight: 64,
   },
 });
