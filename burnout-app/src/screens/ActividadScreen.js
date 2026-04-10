@@ -80,6 +80,16 @@ function parsearListaReflexion(texto) {
   }
 }
 
+function parsearCajaHerramientas(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "caja_herramientas") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -142,6 +152,7 @@ export default function ActividadScreen({ navigation, route }) {
   const journaling       = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
   const formularioPlan   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling ? parsearFormularioPlan(actividad.contenido) : null;
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
+  const cajaHerramientas = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -202,6 +213,18 @@ export default function ActividadScreen({ navigation, route }) {
   const numItems = listaReflexion?.num_items || 5;
   const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
   const listaCompleta = items.every((it) => it.trim());
+
+  const [seleccionadas, setSeleccionadas] = useState(new Set());
+  const minSeleccion = cajaHerramientas?.min_seleccion || 3;
+  const cajaCompleta = seleccionadas.size >= minSeleccion;
+
+  const toggleTecnica = (id) => {
+    setSeleccionadas((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
   const [completada, setCompletada] = useState(yaCompletada);
@@ -284,6 +307,37 @@ export default function ActividadScreen({ navigation, route }) {
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "No se pudo guardar la reflexión");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
+
+  const handleGuardarCaja = async () => {
+    if (!cajaCompleta) {
+      Alert.alert("Selecciona más técnicas", `Elige al menos ${minSeleccion} técnicas para tu caja de herramientas.`);
+      return;
+    }
+    const elegidas = (cajaHerramientas?.tecnicas || []).filter((t) => seleccionadas.has(t.id));
+    const contenido = "Mi caja de herramientas:\n\n" + elegidas.map((t) => `✓ ${t.nombre}`).join("\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu caja de herramientas se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar");
     } finally {
       setGuardandoReflexion(false);
     }
@@ -813,6 +867,69 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : cajaHerramientas ? (
+              completada ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Text style={{ fontSize: 56 }}>🧰</Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      ¡Tu caja de herramientas está lista!
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                      Has completado el programa. Lleva estas herramientas contigo.
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                /* ── SELECCIÓN ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>🧰 Mi caja de herramientas</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{cajaHerramientas.instrucciones}</Text>
+                  <Text style={styles.cajaContador}>
+                    {seleccionadas.size} seleccionadas · mínimo {minSeleccion}
+                  </Text>
+
+                  <View style={styles.cajaGrid}>
+                    {cajaHerramientas.tecnicas.map((tecnica) => {
+                      const activa = seleccionadas.has(tecnica.id);
+                      return (
+                        <TouchableOpacity
+                          key={tecnica.id}
+                          style={[styles.cajaTarjeta, activa && styles.cajaTarjetaActiva]}
+                          onPress={() => toggleTecnica(tecnica.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={activa ? tecnica.icono : `${tecnica.icono}-outline`}
+                            size={24}
+                            color={activa ? colors.white : AZUL}
+                          />
+                          <Text style={[styles.cajaTarjetaNombre, activa && { color: colors.white }]}>
+                            {tecnica.nombre}
+                          </Text>
+                          {activa && (
+                            <Ionicons name="checkmark-circle" size={16} color={colors.white} style={styles.cajaCheck} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Button
+                    title="Guardar mi caja de herramientas"
+                    onPress={handleGuardarCaja}
+                    loading={guardandoReflexion}
+                    style={[styles.botonCompletar, { opacity: cajaCompleta ? 1 : 0.4 }]}
+                    disabled={!cajaCompleta}
+                  />
+                </View>
+              )
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -821,7 +938,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -834,7 +951,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -874,7 +991,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1252,5 +1369,42 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  cajaContador: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  cajaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  cajaTarjeta: {
+    width: "47%",
+    backgroundColor: "#F0F4FF",
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    gap: spacing.xs,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    position: "relative",
+  },
+  cajaTarjetaActiva: {
+    backgroundColor: AZUL,
+    borderColor: AZUL,
+  },
+  cajaTarjetaNombre: {
+    fontSize: fonts.sizes.xs,
+    color: AZUL,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  cajaCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
   },
 });
