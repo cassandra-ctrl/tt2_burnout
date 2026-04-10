@@ -1,7 +1,7 @@
 // PANTALLA DE ACTIVIDAD
 // src/screens/ActividadScreen.js
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -44,6 +44,16 @@ function parsearDistorsiones(texto) {
   try {
     const obj = JSON.parse(texto);
     if (obj?.tipo === "cuestionario_distorsiones") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function parsearJournaling(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "journaling") return obj;
     return null;
   } catch (_) {
     return null;
@@ -109,6 +119,7 @@ export default function ActividadScreen({ navigation, route }) {
   const esLectura = !videoId && esUrlWeb(actividad.contenido);
   const cuestionario = !videoId && !esLectura ? parsearCuestionario(actividad.contenido) : null;
   const distorsiones = !videoId && !esLectura && !cuestionario ? parsearDistorsiones(actividad.contenido) : null;
+  const journaling   = !videoId && !esLectura && !cuestionario && !distorsiones ? parsearJournaling(actividad.contenido) : null;
 
   // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
@@ -157,6 +168,7 @@ export default function ActividadScreen({ navigation, route }) {
       )
     : false;
 
+  const scrollViewRef = useRef(null);
   const { isConnected, lastSyncAt, refrescarPendientes } = useNetwork();
   const [completando, setCompletando] = useState(false);
   const [completada, setCompletada] = useState(yaCompletada);
@@ -244,14 +256,46 @@ export default function ActividadScreen({ navigation, route }) {
     }
   };
 
+  const handleGuardarJournaling = async () => {
+    if (!reflexion.trim()) {
+      Alert.alert("Espera", "Escribe algo antes de guardar tu reflexión.");
+      return;
+    }
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido: reflexion.trim() } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu reflexión se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, reflexion.trim());
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar la reflexión");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <OfflineBanner />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -498,6 +542,60 @@ export default function ActividadScreen({ navigation, route }) {
                   )}
                 </View>
               )
+            ) : journaling ? (
+              completada ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Ya guardaste tu reflexión
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                /* ── FORMULARIO JOURNALING ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Journaling</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{journaling.instrucciones}</Text>
+
+                  {journaling.preguntas_guia?.length > 0 && (
+                    <View style={styles.guiaContainer}>
+                      <Text style={styles.guiaTitulo}>Preguntas para guiarte:</Text>
+                      {journaling.preguntas_guia.map((q, i) => (
+                        <Text key={i} style={styles.guiaPregunta}>• {q}</Text>
+                      ))}
+                    </View>
+                  )}
+
+                  <TextInput
+                    style={styles.journalingInput}
+                    value={reflexion}
+                    onChangeText={setReflexion}
+                    placeholder="Escribe tu reflexión aquí..."
+                    placeholderTextColor={colors.gray}
+                    multiline
+                    textAlignVertical="top"
+                    maxLength={1000}
+                    onFocus={() => {
+                      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+                    }}
+                  />
+                  <Text style={styles.contadorCaracteres}>{reflexion.length}/1000</Text>
+
+                  <Button
+                    title="Guardar reflexión"
+                    onPress={handleGuardarJournaling}
+                    loading={guardandoReflexion}
+                    style={styles.botonCompletar}
+                  />
+                </View>
+              )
             ) : (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>Descripción</Text>
@@ -506,7 +604,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && (
+            {reflexionExistente && !mostrarReflexion && !journaling && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -519,7 +617,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && (
+            {mostrarReflexion && !journaling && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -559,7 +657,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && (
+            {!completada && !mostrarReflexion && !journaling && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -856,5 +954,43 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     lineHeight: 18,
     textAlign: "center",
+  },
+  guiaContainer: {
+    backgroundColor: "#F0F4FF",
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: AZUL,
+  },
+  guiaTitulo: {
+    fontSize: fonts.sizes.xs,
+    fontWeight: "700",
+    color: AZUL,
+    marginBottom: spacing.sm,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  guiaPregunta: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  journalingInput: {
+    borderWidth: 1,
+    borderColor: colors.grayLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    minHeight: 160,
+    marginBottom: 4,
+  },
+  contadorCaracteres: {
+    fontSize: fonts.sizes.xs,
+    color: colors.gray,
+    textAlign: "right",
+    marginBottom: spacing.md,
   },
 });
