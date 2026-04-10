@@ -40,6 +40,16 @@ function parsearCuestionario(texto) {
   }
 }
 
+function parsearDistorsiones(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "cuestionario_distorsiones") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const ESCALA = [
   { valor: 0, label: "Nunca" },
   { valor: 1, label: "Pocas veces" },
@@ -98,10 +108,18 @@ export default function ActividadScreen({ navigation, route }) {
   const videoId = extraerVideoId(actividad.contenido);
   const esLectura = !videoId && esUrlWeb(actividad.contenido);
   const cuestionario = !videoId && !esLectura ? parsearCuestionario(actividad.contenido) : null;
+  const distorsiones = !videoId && !esLectura && !cuestionario ? parsearDistorsiones(actividad.contenido) : null;
 
-  // Estado del cuestionario
+  // Estado del cuestionario de síntomas
   const [respuestas, setRespuestas] = useState({});
   const [mostrarResultados, setMostrarResultados] = useState(false);
+
+  // Estado del quiz de distorsiones
+  const [preguntaActual, setPreguntaActual] = useState(0);
+  const [respuestaSeleccionada, setRespuestaSeleccionada] = useState(null);
+  const [mostrarFeedback, setMostrarFeedback] = useState(false);
+  const [aciertos, setAciertos] = useState(0);
+  const [quizTerminado, setQuizTerminado] = useState(false);
 
   const calcularResultados = () => {
     if (!cuestionario) return [];
@@ -111,6 +129,26 @@ export default function ActividadScreen({ navigation, route }) {
       const porcentaje = Math.round((suma / max) * 100);
       return { ...dim, porcentaje, nivel: nivelDimension(porcentaje) };
     });
+  };
+
+  const handleSeleccionarOpcion = (idx) => {
+    if (mostrarFeedback) return;
+    const pregunta = distorsiones.preguntas[preguntaActual];
+    const esCorrecta = idx === pregunta.correcta;
+    setRespuestaSeleccionada(idx);
+    setMostrarFeedback(true);
+    if (esCorrecta) setAciertos((a) => a + 1);
+  };
+
+  const handleSiguientePregunta = () => {
+    const total = distorsiones?.preguntas.length || 0;
+    if (preguntaActual + 1 >= total) {
+      setQuizTerminado(true);
+    } else {
+      setPreguntaActual((p) => p + 1);
+      setRespuestaSeleccionada(null);
+      setMostrarFeedback(false);
+    }
   };
 
   const cuestionarioCompleto = cuestionario
@@ -346,6 +384,118 @@ export default function ActividadScreen({ navigation, route }) {
                     style={[styles.botonCompletar, { opacity: cuestionarioCompleto ? 1 : 0.4 }]}
                     disabled={!cuestionarioCompleto}
                   />
+                </View>
+              )
+            ) : distorsiones ? (
+              completada && !quizTerminado ? (
+                /* ── YA COMPLETADO ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
+                    <Ionicons name="checkmark-circle" size={56} color="#4A90D9" />
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Ya completaste este quiz
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center", marginTop: spacing.sm }]}>
+                      Identificar distorsiones cognitivas es el primer paso para cambiarlas.
+                    </Text>
+                  </View>
+                </View>
+              ) : quizTerminado ? (
+                /* ── RESULTADO FINAL ── */
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Text style={{ fontSize: 48 }}>
+                      {aciertos === distorsiones.preguntas.length ? "🏆" : aciertos >= distorsiones.preguntas.length / 2 ? "👍" : "💪"}
+                    </Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      {aciertos} de {distorsiones.preguntas.length} correctas
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center", marginTop: spacing.sm }]}>
+                      {aciertos === distorsiones.preguntas.length
+                        ? "¡Excelente! Reconoces muy bien las distorsiones cognitivas."
+                        : aciertos >= distorsiones.preguntas.length / 2
+                        ? "Buen trabajo. Con práctica identificarás estas distorsiones cada vez más rápido."
+                        : "Cada intento es aprendizaje. Las distorsiones son sutiles, lo importante es empezar a reconocerlas."}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                /* ── PREGUNTA ACTUAL ── */
+                <View style={styles.card}>
+                  <View style={styles.quizProgreso}>
+                    <Text style={styles.quizProgresoTexto}>
+                      Pregunta {preguntaActual + 1} de {distorsiones.preguntas.length}
+                    </Text>
+                    <View style={styles.barraFondo}>
+                      <View style={[styles.barraRelleno, {
+                        width: `${((preguntaActual + (mostrarFeedback ? 1 : 0)) / distorsiones.preguntas.length) * 100}%`,
+                        backgroundColor: AZUL,
+                      }]} />
+                    </View>
+                  </View>
+
+                  <View style={styles.situacionCard}>
+                    <Text style={styles.situacionLabel}>Situación</Text>
+                    <Text style={styles.situacionTexto}>
+                      {distorsiones.preguntas[preguntaActual].situacion}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.cuestionarioInstruccion}>¿Qué distorsión cognitiva representa?</Text>
+
+                  {distorsiones.preguntas[preguntaActual].opciones.map((opcion, idx) => {
+                    const pregunta = distorsiones.preguntas[preguntaActual];
+                    const esCorrecta = idx === pregunta.correcta;
+                    const esSeleccionada = idx === respuestaSeleccionada;
+
+                    let estiloBorde = {};
+                    let estiloFondo = {};
+                    let colorTexto = colors.text;
+
+                    if (mostrarFeedback) {
+                      if (esCorrecta) {
+                        estiloBorde = { borderColor: "#4A90D9" };
+                        estiloFondo = { backgroundColor: "#EAF4FF" };
+                        colorTexto = "#4A90D9";
+                      } else if (esSeleccionada) {
+                        estiloBorde = { borderColor: "#E8875A" };
+                        estiloFondo = { backgroundColor: "#FFF3EE" };
+                        colorTexto = "#E8875A";
+                      }
+                    }
+
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.opcionBtn, estiloBorde, estiloFondo]}
+                        onPress={() => handleSeleccionarOpcion(idx)}
+                        activeOpacity={mostrarFeedback ? 1 : 0.7}
+                      >
+                        <View style={styles.opcionRow}>
+                          <Text style={[styles.opcionTexto, { color: colorTexto }]}>{opcion}</Text>
+                          {mostrarFeedback && esCorrecta && (
+                            <Ionicons name="checkmark-circle" size={18} color="#4A90D9" />
+                          )}
+                          {mostrarFeedback && esSeleccionada && !esCorrecta && (
+                            <Ionicons name="close-circle" size={18} color="#E8875A" />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {mostrarFeedback && (
+                    <View style={styles.feedbackWrap}>
+                      <Text style={styles.feedbackTexto}>
+                        💡 {distorsiones.preguntas[preguntaActual].explicacion}
+                      </Text>
+                      <TouchableOpacity style={styles.btnSiguiente} onPress={handleSiguientePregunta}>
+                        <Text style={styles.btnSiguienteTexto}>
+                          {preguntaActual + 1 < distorsiones.preguntas.length ? "Siguiente →" : "Ver resultado"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               )
             ) : (
@@ -629,6 +779,75 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.xs,
     color: colors.textSecondary,
     textAlign: "right",
+  },
+  quizProgreso: { marginBottom: spacing.md },
+  quizProgresoTexto: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  situacionCard: {
+    backgroundColor: "#F0F4FF",
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: AZUL,
+  },
+  situacionLabel: {
+    fontSize: fonts.sizes.xs,
+    color: AZUL,
+    fontWeight: "700",
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  situacionTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
+  opcionBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.grayLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  opcionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  opcionTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  feedbackWrap: {
+    backgroundColor: "#F8F9FF",
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  feedbackTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  btnSiguiente: {
+    backgroundColor: AZUL,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+  },
+  btnSiguienteTexto: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: fonts.sizes.sm,
   },
   resultadoNota: {
     fontSize: fonts.sizes.xs,
