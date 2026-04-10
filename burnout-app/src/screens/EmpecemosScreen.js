@@ -18,13 +18,11 @@ export default function EmpecemosScreen({ navigation }) {
   // ---------------------------------------------------------------------------
   const handleComenzar = async () => {
     try {
-      // Actualizar datos del usuario (tutorial completado)
       await actualizarUsuario();
     } catch (error) {
       console.log("Error actualizando usuario:", error);
     }
 
-    // Navegar al Home principal
     navigation.reset({
       index: 0,
       routes: [{ name: "MainTabs" }],

@@ -91,9 +91,12 @@ function MainTabs() {
 }
 
 // STACK PRINCIPAL (Cuando el usuario está logueado)
-function MainStack() {
+function MainStack({ skipOnboarding }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={skipOnboarding ? "MainTabs" : "Tutorial"}
+    >
       {/* Onboarding / Tutorial */}
       <Stack.Screen name="Tutorial" component={TutorialScreen} />
       <Stack.Screen name="ConsentimientoInformado" component={ConsentimientoScreen} />
@@ -115,7 +118,7 @@ function MainStack() {
 // NAVEGADOR PRINCIPAL
 
 export default function AppNavigator() {
-  const { cargandoInicial, estaLogueado } = useAuth();
+  const { cargandoInicial, estaLogueado, onboardingCompletado } = useAuth();
 
   // Mostrar loading mientras verifica sesión
   if (cargandoInicial) {
@@ -124,7 +127,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {estaLogueado ? <MainStack /> : <AuthStack />}
+      {estaLogueado ? <MainStack skipOnboarding={onboardingCompletado} /> : <AuthStack />}
     </NavigationContainer>
   );
 }

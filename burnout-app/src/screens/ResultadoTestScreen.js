@@ -11,13 +11,23 @@ export default function ResultadoTestScreen({ navigation, route }) {
   const getColorNivel = (nivel) => {
     switch (nivel?.toLowerCase()) {
       case "bajo":
-        return "#4CAF50"; // Verde
+        return "#4A90D9"; // Azul suave
       case "medio":
-        return "#FF9800"; // Naranja
+        return "#7B68EE"; // Lavanda
       case "alto":
-        return "#F44336"; // Rojo
+        return "#E8875A"; // Naranja suave
       default:
         return colors.primary;
+    }
+  };
+
+  // Etiqueta amigable según nivel
+  const getEtiquetaNivel = (nivel) => {
+    switch (nivel?.toLowerCase()) {
+      case "bajo":  return "En equilibrio";
+      case "medio": return "Área de atención";
+      case "alto":  return "Requiere cuidado";
+      default:      return nivel?.toUpperCase() || "---";
     }
   };
 
@@ -25,11 +35,11 @@ export default function ResultadoTestScreen({ navigation, route }) {
   const getMensajeNivel = (nivel) => {
     switch (nivel?.toLowerCase()) {
       case "bajo":
-        return "¡Excelente! Tu nivel de burnout es bajo. Sigue cuidando tu bienestar.";
+        return "¡Vas muy bien! Te encuentras en equilibrio. Sigue cuidando tu bienestar con las actividades del programa.";
       case "medio":
-        return "Tu nivel de burnout es moderado. Las actividades te ayudarán a mejorar.";
+        return "Hay algunas áreas que vale la pena atender. Las actividades del programa te ayudarán a sentirte mejor poco a poco.";
       case "alto":
-        return "Tu nivel de burnout es alto. Es importante que sigas el tratamiento.";
+        return "Este resultado indica que podrías estar pasando por un momento difícil. El programa está diseñado para acompañarte en este proceso, paso a paso.";
       default:
         return "Gracias por completar el test.";
     }
@@ -67,7 +77,7 @@ export default function ResultadoTestScreen({ navigation, route }) {
         >
           <Text style={styles.nivelLabel}>Tu nivel de burnout es:</Text>
           <Text style={styles.nivelValor}>
-            {resultado?.nivel_burnout?.toUpperCase() || "---"}
+            {getEtiquetaNivel(resultado?.nivel_burnout)}
           </Text>
         </View>
 

@@ -7,7 +7,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { authAPI } from "../services/api";
+import { authAPI, testAPI } from "../services/api";
 
 // Crear el contexto
 const AuthContext = createContext({});
@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   const [cargando, setCargando] = useState(false);
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [error, setError] = useState(null);
+  const [onboardingCompletado, setOnboardingCompletado] = useState(false);
 
   // -------------------------------------------------------------------------
   // Verificar sesión al iniciar la app
@@ -39,6 +40,13 @@ export function AuthProvider({ children }) {
           const data = await authAPI.getProfile();
           const user = data.usuario || data.user;
           setUsuario(user);
+          // Verificar en BD si ya completó el test inicial
+          try {
+            const estado = await testAPI.getEstado();
+            setOnboardingCompletado(estado?.prueba_inicial?.completada === true);
+          } catch (_) {
+            setOnboardingCompletado(false);
+          }
         } catch (err) {
           // Token inválido o expirado
           await AsyncStorage.removeItem("token");
@@ -112,6 +120,7 @@ export function AuthProvider({ children }) {
     setUsuario(user);
   };
 
+
   // -------------------------------------------------------------------------
   // Cerrar sesión
   // -------------------------------------------------------------------------
@@ -154,6 +163,7 @@ export function AuthProvider({ children }) {
     cargandoInicial,
     error,
     estaLogueado: !!usuario,
+    onboardingCompletado,
     login,
     loginConDatos,
     register,

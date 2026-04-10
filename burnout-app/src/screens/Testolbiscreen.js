@@ -158,8 +158,8 @@ export default function TestOLBIScreen({ navigation, route }) {
             <Text style={styles.preguntaTexto}>{pregunta.pregunta}</Text>
             {/* etiquetas */}
             <View style={styles.etiquetasContainer}>
-              <Text style={styles.etiqueta}>De acuerdo</Text>
               <Text style={styles.etiqueta}>En desacuerdo</Text>
+              <Text style={styles.etiqueta}>De acuerdo</Text>
             </View>
 
             {/* OPCIONES DE RESPUESTA (CIRCULOS) */}
