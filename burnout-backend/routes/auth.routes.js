@@ -26,7 +26,7 @@ router.post(
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
-          error: "Datos incorrectos",
+          error: "El correo o contraseña son incorrectos",
           errors: errors.array(),
         });
       }
@@ -55,8 +55,8 @@ router.post(
       //¿Existe el usuario?
       if (!usuario) {
         return res.status(401).json({
-          error: "Credenciales incorrectas",
-          message: "El usuario o contraseña son incorrectos",
+          error: "El correo o contraseña son incorrectos",
+          message: "El correo o contraseña son incorrectos",
         });
       }
 
@@ -77,8 +77,8 @@ router.post(
       );
       if (!validPassword) {
         return res.status(401).json({
-          error: "Credenciales incorrectas",
-          message: "El usuario o contraseña son incorrectos",
+          error: "El correo o contraseña son incorrectos",
+          message: "El correo o contraseña son incorrectos",
         });
       }
 

@@ -54,7 +54,7 @@ const Login = () => {
       }
       
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.error || err.message || 'Error al iniciar sesión');
       setLoading(false);
     }
   };

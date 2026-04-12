@@ -31,10 +31,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expirado o inválido
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      // En login el 401 es una credencial incorrecta, no sesión expirada.
+      // Solo redirigir si el error viene de una ruta protegida (no de /auth/login).
+      const esRutaLogin = url.includes('/auth/login');
+      if (!esRutaLogin) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
