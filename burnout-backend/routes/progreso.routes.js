@@ -236,6 +236,7 @@ router.get(
 
 // POST /api/progreso/actividad/completar
 // Marcar una actividad como completada
+const limites = require("../config/limites");
 
 router.post(
   "/actividad/completar",
@@ -275,6 +276,28 @@ router.post(
         return res.status(404).json({
           error: "Actividad no encontrada",
         });
+      }
+
+      // Verificar límite diario de actividades (si está activo)
+      if (limites.LIMITE_DIARIO_ACTIVO) {
+        const hoy = new Date().toISOString().split("T")[0];
+        const completadasHoy = await db.queryOne(
+          `SELECT COUNT(*) AS total
+           FROM progreso_actividad
+           WHERE id_paciente = ?
+             AND DATE(fecha_terminada) = ?
+             AND estado = 'completada'
+             AND id_actividad != ?`,
+          [paciente.id_paciente, hoy, id_actividad],
+        );
+
+        if ((completadasHoy?.total || 0) >= limites.MAX_ACTIVIDADES_POR_DIA) {
+          return res.status(429).json({
+            error: "limite_diario",
+            mensaje: `Ya completaste ${limites.MAX_ACTIVIDADES_POR_DIA} actividad(es) hoy. ¡Vuelve mañana para continuar!`,
+            max: limites.MAX_ACTIVIDADES_POR_DIA,
+          });
+        }
       }
 
       // Verificar si ya existe un registro de progreso

@@ -573,7 +573,11 @@ export default function ActividadScreen({ navigation, route }) {
       setCompletada(true);
       setMostrarReflexion(true);
     } catch (error) {
-      Alert.alert("Error", error.message || "No se pudo completar la actividad");
+      if (error.status === 429 || error.message?.includes("mañana")) {
+        Alert.alert("Límite del día alcanzado 🌙", error.message || "Ya completaste el máximo de actividades por hoy. ¡Vuelve mañana!");
+      } else {
+        Alert.alert("Error", error.message || "No se pudo completar la actividad");
+      }
     } finally {
       setCompletando(false);
     }
