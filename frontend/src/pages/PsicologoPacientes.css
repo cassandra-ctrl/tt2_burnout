@@ -32,17 +32,20 @@
 
 .search-icon {
   position: absolute;
-  left: 20px;
+  left: 18px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 18px;
+  font-size: 16px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {
   width: 100%;
   border: none;
   background: transparent;
-  padding-left: 35px;
+  padding-left: 42px;
   font-size: 16px;
   outline: none;
   color: #1a1d3a;
