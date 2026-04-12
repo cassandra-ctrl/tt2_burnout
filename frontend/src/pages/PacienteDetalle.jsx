@@ -285,10 +285,10 @@ const PacienteDetalle = () => {
             </button>
 
             <div className="detalle-datos">
-              <div className="dato-item">
+              {/* <div className="dato-item">
                 <span className="dato-label">Fecha de nacimiento:</span>
                 <span className="dato-value">dd/mm/aaaa</span>
-              </div>
+              </div> */}
               <div className="dato-item">
                 <span className="dato-label">Fecha de registro:</span>
                 <span className="dato-value">{formatearFecha(paciente.fecha_registro)}</span>
@@ -297,10 +297,10 @@ const PacienteDetalle = () => {
                 <span className="dato-label">Correo electrónico:</span>
                 <span className="dato-value">{paciente.correo}</span>
               </div>
-              <div className="dato-item">
+              {/* <div className="dato-item">
                 <span className="dato-label">Número telefónico:</span>
                 <span className="dato-value">21 21 23 74 65</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
