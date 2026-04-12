@@ -399,6 +399,7 @@ router.post(
         hora_cita,
         id_categoria,
         observaciones,
+        fecha_hoy,
       } = req.body;
 
       //Obtenemos el id del psicologo para crear una cita
@@ -437,8 +438,10 @@ router.post(
           .json({ error: "Categoría de cita no encontrada" });
       }
 
-      //Validamos que la fecha escugida no sea una pasada
-      const hoy = new Date().toISOString().split("T")[0];
+      //Validamos que la fecha escogida no sea una pasada.
+      // Se usa la fecha del dispositivo del cliente (fecha_hoy) para evitar
+      // desfases de zona horaria cuando el servidor corre en UTC (ej. Azure).
+      const hoy = fecha_hoy || new Date().toISOString().split("T")[0];
       if (fecha_cita < hoy) {
         return res.status(400).json({
           error: "Fecha inválida",
@@ -530,7 +533,7 @@ router.put(
       }
 
       const { id } = req.params;
-      const { fecha_cita, hora_cita, id_categoria, observaciones } = req.body;
+      const { fecha_cita, hora_cita, id_categoria, observaciones, fecha_hoy } = req.body;
 
       //Obtenemos el psicologo
       const psicologo = await db.queryOne(
@@ -571,8 +574,8 @@ router.put(
       const params = [];
 
       if (fecha_cita) {
-        //Validamos que no sea una fecha pasada
-        const hoy = new Date().toISOString().split("T")[0];
+        // Usar fecha del cliente para evitar desfases de zona horaria en Azure
+        const hoy = fecha_hoy || new Date().toISOString().split("T")[0];
         if (fecha_cita < hoy) {
           return res.status(400).json({
             error: "Fecha inválida",

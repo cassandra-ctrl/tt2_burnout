@@ -211,12 +211,18 @@ const ModalAgendarCita = ({ isOpen, onClose, idPaciente, nombrePaciente, onCitaC
     try {
       setLoading(true);
 
+      // Fecha de hoy desde el dispositivo del cliente (para que el servidor
+      // no use su propio reloj UTC al validar fechas pasadas)
+      const ahora = new Date();
+      const fechaHoyCliente = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+
       const citaData = {
         id_paciente: idPaciente,
         fecha_cita: formData.fecha_cita,
         hora_cita: formData.hora_cita,
         id_categoria: parseInt(formData.id_categoria),
         observaciones: formData.observaciones || null,
+        fecha_hoy: fechaHoyCliente,
       };
 
       await citasService.crearCita(citaData);
