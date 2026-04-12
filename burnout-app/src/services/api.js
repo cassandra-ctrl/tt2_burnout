@@ -4,16 +4,14 @@
 // ============================================================================
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
-// Cambia esta URL por la IP de tu computadora cuando pruebes en tu celular
-// Para emulador Android: 10.0.2.2
-// Para tu celular: usa la IP de tu computadora (ej: 192.168.1.100)
-// Para navegador web: localhost
-const API_URL =
-  Platform.OS === "web"
-    ? "http://localhost:3000/api"
-    : "http://192.168.1.70:3000/api";
-    // :"http://10.100.73.216:3000/api";
+
+// La URL se lee del archivo .env correspondiente al entorno:
+//   Desarrollo local  → .env.local        (npx expo start)
+//   Producción/APK    → .env.production   (eas build)
+//
+// Para cambiar la IP local edita .env.local
+// Para apuntar a Azure edita .env.production
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.70:3000/api";
 
 // ============================================================================
 // FUNCIÓN BASE PARA PETICIONES

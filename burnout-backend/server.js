@@ -23,11 +23,16 @@ const PORT = process.env.PORT || 3000;
 //Headers HTTP seguros
 app.use(helmet());
 
-//CORS: Permitir peticiones del fronted
+//CORS: Permitir peticiones del frontend
+// En desarrollo: permite cualquier origen (*)
+// En producción: solo permite los orígenes definidos en CORS_ORIGIN
+const origenesPermitidos = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  : "*";
 
 app.use(
   cors({
-    origin: "*", // Permite cualquier origen (para desarrollo)
+    origin: origenesPermitidos,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
