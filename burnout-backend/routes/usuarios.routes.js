@@ -205,8 +205,34 @@ router.post(
       //ya existe el correo?
       if (existingUser) {
         return res.status(400).json({
-          error: "El correo ya existe en la bd",
+          error: "Ya existe un usuario con ese correo, intenta con otro.",
         });
+      }
+
+      // verificar matrícula duplicada
+      if (rol === "paciente" && matricula) {
+        const existingMatricula = await db.queryOne(
+          "SELECT id_paciente FROM paciente WHERE matricula = ?",
+          [matricula],
+        );
+        if (existingMatricula) {
+          return res.status(400).json({
+            error: `La matrícula ${matricula} ya está registrada, verifica los datos.`,
+          });
+        }
+      }
+
+      // verificar cédula profesional duplicada
+      if (rol === "psicologo" && cedula_profesional) {
+        const existingCedula = await db.queryOne(
+          "SELECT id_psicologo FROM psicologo WHERE cedula_profesional = ?",
+          [cedula_profesional],
+        );
+        if (existingCedula) {
+          return res.status(400).json({
+            error: `La cédula profesional ${cedula_profesional} ya está registrada, verifica los datos.`,
+          });
+        }
       }
 
       //sino existe, hasheamos la password
@@ -255,6 +281,21 @@ router.post(
       });
     } catch (error) {
       console.error("Error al crear usuario", error);
+
+      // Error de entrada duplicada en MySQL (matrícula, cédula u otro UNIQUE)
+      if (error.code === "ER_DUP_ENTRY") {
+        const campo = error.message.includes("matricula")
+          ? "matrícula"
+          : error.message.includes("cedula_profesional")
+            ? "cédula profesional"
+            : error.message.includes("correo")
+              ? "correo"
+              : "identificador";
+        return res.status(400).json({
+          error: `Ya existe un usuario con ese ${campo}, verifica los datos.`,
+        });
+      }
+
       res.status(500).json({
         error: "El usuario no pudo crearse exitosamente",
         message: error.message,
@@ -363,11 +404,33 @@ router.put(
 
           // Actualizar datos específicos del rol
           if (usuario.rol === "paciente" && matricula) {
+            // verificar que la matrícula no la tenga otro paciente
+            const existingMatricula = await connection.query(
+              "SELECT id_paciente FROM paciente WHERE matricula = ? AND id_usuario != ?",
+              [matricula, id],
+            );
+            if (existingMatricula[0].length > 0) {
+              throw Object.assign(
+                new Error(`La matrícula ${matricula} ya está registrada en otro paciente.`),
+                { statusCode: 400, esValidacion: true },
+              );
+            }
             await connection.query(
               "UPDATE paciente SET matricula = ? WHERE id_usuario = ?",
               [matricula, id],
             );
           } else if (usuario.rol === "psicologo" && cedula_profesional) {
+            // verificar que la cédula no la tenga otro psicólogo
+            const existingCedula = await connection.query(
+              "SELECT id_psicologo FROM psicologo WHERE cedula_profesional = ? AND id_usuario != ?",
+              [cedula_profesional, id],
+            );
+            if (existingCedula[0].length > 0) {
+              throw Object.assign(
+                new Error(`La cédula profesional ${cedula_profesional} ya está registrada en otro psicólogo.`),
+                { statusCode: 400, esValidacion: true },
+              );
+            }
             await connection.query(
               "UPDATE psicologo SET cedula_profesional = ? WHERE id_usuario = ?",
               [cedula_profesional, id],
@@ -380,6 +443,24 @@ router.put(
       
     } catch (error) {
       console.error("Error actualizando usuario:", error);
+
+      if (error.esValidacion) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      if (error.code === "ER_DUP_ENTRY") {
+        const campo = error.message.includes("matricula")
+          ? "matrícula"
+          : error.message.includes("cedula_profesional")
+            ? "cédula profesional"
+            : error.message.includes("correo")
+              ? "correo"
+              : "identificador";
+        return res.status(400).json({
+          error: `Ya existe un usuario con ese ${campo}, verifica los datos.`,
+        });
+      }
+
       res.status(500).json({
         error: "Error actualizando usuario",
         message: error.message,
