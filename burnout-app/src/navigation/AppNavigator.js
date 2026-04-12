@@ -38,6 +38,7 @@ import DiarioScreen from "../screens/DiarioScreen";
 import PerfilScreen from "../screens/PerfilScreen";
 import CitasScreen from "../screens/CitasScreen";
 import LogrosScreen from "../screens/LogrosScreen";
+import GraciasScreen from "../screens/GraciasScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -111,6 +112,7 @@ function MainStack({ skipOnboarding }) {
       <Stack.Screen name="Actividad"     component={ActividadScreen} />
       <Stack.Screen name="Citas"         component={CitasScreen} />
       <Stack.Screen name="Logros"        component={LogrosScreen} />
+      <Stack.Screen name="Gracias"       component={GraciasScreen} />
     </Stack.Navigator>
   );
 }

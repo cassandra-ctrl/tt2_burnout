@@ -1,7 +1,7 @@
 // PANTALLA PRINCIPAL - HOME
 // src/screens/HomeScreen.js
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { progresoAPI, logrosAPI, modulosAPI } from "../services/api";
+import { progresoAPI, logrosAPI, modulosAPI, testAPI } from "../services/api";
 import { Loading } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
 import { guardarCache, leerCache } from "../utils/offline";
@@ -30,6 +30,8 @@ export default function HomeScreen({ navigation }) {
   const [progreso, setProgreso] = useState(null);
   const [modulos, setModulos] = useState([]);
   const [ultimoLogro, setUltimoLogro] = useState(null);
+  const [testFinalPendiente, setTestFinalPendiente] = useState(false);
+  const yaVerificoFinalRef = useRef(false);
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -48,6 +50,20 @@ export default function HomeScreen({ navigation }) {
 
       const misLogros = logrosData.logros || [];
       if (misLogros.length > 0) setUltimoLogro(misLogros[0]);
+
+      // Verificar si el programa está completo y falta el test final
+      if (!yaVerificoFinalRef.current) {
+        yaVerificoFinalRef.current = true;
+        const porcentaje = progresoData?.progreso_general?.porcentaje_completado || 0;
+        if (porcentaje >= 100) {
+          try {
+            const estadoTest = await testAPI.getEstado();
+            if (!estadoTest?.prueba_final?.completada) {
+              setTestFinalPendiente(true);
+            }
+          } catch (_) {}
+        }
+      }
     } catch (error) {
       if (error.status === 0) {
         const [progresoData, modulosData, logrosData] = await Promise.all([
@@ -126,6 +142,24 @@ export default function HomeScreen({ navigation }) {
               <View style={[styles.barraRelleno, { width: `${porcentajeTotal}%` }]} />
             </View>
           </View>
+
+          {/* BANNER TEST FINAL */}
+          {testFinalPendiente && (
+            <TouchableOpacity
+              style={styles.bannerFinal}
+              onPress={() => navigation.navigate("TestOLBI", { tipo: "final" })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bannerFinalEmoji}>🎓</Text>
+              <View style={styles.bannerFinalTextos}>
+                <Text style={styles.bannerFinalTitulo}>¡Completaste el programa!</Text>
+                <Text style={styles.bannerFinalSubtitulo}>
+                  Es momento de realizar tu evaluación final. Toca aquí para comenzar.
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward-circle" size={28} color={colors.white} />
+            </TouchableOpacity>
+          )}
 
           {/* CONTINUAR DONDE LO DEJASTE */}
           <Text style={styles.seccionTitulo}>📚 Continuar donde lo dejaste</Text>
@@ -395,5 +429,36 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     paddingVertical: spacing.sm,
+  },
+  bannerFinal: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: AZUL,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+    shadowColor: AZUL,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  bannerFinalEmoji: {
+    fontSize: 32,
+  },
+  bannerFinalTextos: {
+    flex: 1,
+  },
+  bannerFinalTitulo: {
+    fontSize: fonts.sizes.md,
+    fontWeight: "bold",
+    color: colors.white,
+    marginBottom: 2,
+  },
+  bannerFinalSubtitulo: {
+    fontSize: fonts.sizes.xs,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 16,
   },
 });

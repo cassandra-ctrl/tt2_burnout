@@ -50,7 +50,7 @@ export default function ResultadoTestScreen({ navigation, route }) {
     if (tipo === "inicial") {
       navigation.navigate("Empecemos");
     } else {
-      navigation.navigate("MainTabs");
+      navigation.navigate("Gracias");
     }
   };
 
@@ -119,7 +119,7 @@ export default function ResultadoTestScreen({ navigation, route }) {
       {/* Botón continuar */}
       <View style={styles.footer}>
         <Button
-          title="Continuar"
+          title={tipo === "final" ? "Ver cierre del programa" : "Continuar"}
           onPress={handleContinuar}
           style={styles.botonContinuar}
         />
