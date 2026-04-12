@@ -196,6 +196,65 @@ const PacienteDetalle = () => {
     },
   };
 
+  // Gráfica de actividades por módulo
+  const getActividadesModuloData = () => {
+    if (!progreso || !progreso.modulos.length) return null;
+
+    const modulos = progreso.modulos.filter(m => m.actividades.length > 0);
+    if (!modulos.length) return null;
+
+    return {
+      labels: modulos.map(m => m.modulo_titulo.replace('Módulo ', 'Mód. ')),
+      datasets: [
+        {
+          label: 'Completadas',
+          data: modulos.map(m => m.actividades.filter(a => a.estado === 'completada').length),
+          backgroundColor: '#5c6bc0',
+          borderRadius: 4,
+        },
+        {
+          label: 'En progreso',
+          data: modulos.map(m => m.actividades.filter(a => a.estado === 'en_progreso').length),
+          backgroundColor: '#ffb74d',
+          borderRadius: 4,
+        },
+        {
+          label: 'Pendientes',
+          data: modulos.map(m => m.actividades.filter(a => a.estado === 'pendiente').length),
+          backgroundColor: '#e0e0e0',
+          borderRadius: 4,
+        },
+      ],
+    };
+  };
+
+  const actividadesModuloOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            if (!items.length) return '';
+            const modIdx = items[0].dataIndex;
+            const modulos = progreso.modulos.filter(m => m.actividades.length > 0);
+            const total = modulos[modIdx]?.actividades.length || 0;
+            return `Total: ${total} actividades`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: { stacked: true },
+      y: {
+        stacked: true,
+        ticks: { stepSize: 1 },
+        title: { display: true, text: 'Actividades', font: { size: 12 } },
+      },
+    },
+  };
+
   // Funciones del calendario
   const getDiasDelMes = () => {
     const año = mesActual.getFullYear();
@@ -355,18 +414,6 @@ const PacienteDetalle = () => {
           </div>
         </div>
 
-        {/* Evolución */}
-        <div className="seccion-evolucion">
-          <h2 className="seccion-titulo">Evolución</h2>
-          {getBarChartData() ? (
-            <div className="chart-container-bar">
-              <Bar data={getBarChartData()} options={barOptions} />
-            </div>
-          ) : (
-            <div className="no-data">No hay datos suficientes para mostrar la evolución</div>
-          )}
-        </div>
-
         {/* Progreso del programa */}
         <div className="seccion-progreso-programa">
           <h2 className="seccion-titulo">Progreso del programa</h2>
@@ -455,6 +502,27 @@ const PacienteDetalle = () => {
             </>
           ) : (
             <div className="sin-datos-progreso">El paciente aún no ha desbloqueado logros</div>
+          )}
+        </div>
+
+                {/* Evolución */}
+        <div className="seccion-evolucion">
+          <h2 className="seccion-titulo">Evolución</h2>
+          {getBarChartData() ? (
+            <div className="chart-container-bar">
+              <Bar data={getBarChartData()} options={barOptions} />
+            </div>
+          ) : (
+            <div className="no-data">No hay datos suficientes para mostrar la evolución</div>
+          )}
+
+          {getActividadesModuloData() && (
+            <>
+              <h3 className="evolucion-subtitulo">Actividades por módulo</h3>
+              <div className="chart-container-bar">
+                <Bar data={getActividadesModuloData()} options={actividadesModuloOptions} />
+              </div>
+            </>
           )}
         </div>
 
