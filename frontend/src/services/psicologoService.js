@@ -60,7 +60,17 @@ const psicologoService = {
       throw error.response?.data || { error: 'Error obteniendo tests' };
     }
   },
-    getComparacionBurnout: async (id) => {
+    // Obtener logros de un paciente (para psicólogo)
+  getLogrosPaciente: async (id) => {
+    try {
+      const response = await api.get(`/logros/paciente/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Error obteniendo logros' };
+    }
+  },
+
+  getComparacionBurnout: async (id) => {
     try {
       const response = await api.get(`/graficas/paciente/${id}/comparacion-burnout`);
       return response.data;

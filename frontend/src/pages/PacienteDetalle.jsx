@@ -28,6 +28,9 @@ const PacienteDetalle = () => {
   const [tests, setTests] = useState(null);
   const [comparacion, setComparacion] = useState(null);
   const [citas, setCitas] = useState([]);
+  const [progreso, setProgreso] = useState(null);
+  const [logros, setLogros] = useState(null);
+  const [moduloExpandido, setModuloExpandido] = useState(null);
   const [mesActual, setMesActual] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [showModalCita, setShowModalCita] = useState(false);
@@ -59,6 +62,22 @@ const PacienteDetalle = () => {
       } catch (err) {
         console.error('Error al cargar comparación:', err);
         console.error('Detalle del error:', JSON.stringify(err, null, 2));
+      }
+
+      // Cargar progreso detallado (módulos + actividades)
+      try {
+        const dataProgreso = await psicologoService.getProgresoPaciente(id);
+        setProgreso(dataProgreso);
+      } catch (err) {
+        console.error('Error al cargar progreso:', err);
+      }
+
+      // Cargar logros del paciente
+      try {
+        const dataLogros = await psicologoService.getLogrosPaciente(id);
+        setLogros(dataLogros);
+      } catch (err) {
+        console.error('Error al cargar logros:', err);
       }
 
       // Cargar citas del paciente
@@ -348,26 +367,114 @@ const PacienteDetalle = () => {
           )}
         </div>
 
+        {/* Progreso del programa */}
+        <div className="seccion-progreso-programa">
+          <h2 className="seccion-titulo">Progreso del programa</h2>
+          {progreso && progreso.modulos.length > 0 ? (
+            <div className="modulos-lista">
+              {progreso.modulos.map((modulo) => {
+                const completadas = modulo.actividades.filter(a => a.estado === 'completada').length;
+                const total = modulo.actividades.length;
+                const expandido = moduloExpandido === modulo.id_modulo;
+                return (
+                  <div key={modulo.id_modulo} className="modulo-item">
+                    <div
+                      className="modulo-header"
+                      onClick={() => setModuloExpandido(expandido ? null : modulo.id_modulo)}
+                    >
+                      <div className="modulo-info">
+                        <span className="modulo-nombre">{modulo.modulo_titulo}</span>
+                        <span className={`modulo-estado-badge ${modulo.estado_modulo}`}>
+                          {modulo.estado_modulo === 'completado' ? 'Completado'
+                            : modulo.estado_modulo === 'en_progreso' ? 'En progreso'
+                            : 'Bloqueado'}
+                        </span>
+                      </div>
+                      <div className="modulo-barra-row">
+                        <div className="modulo-barra">
+                          <div
+                            className="modulo-barra-fill"
+                            style={{ width: `${modulo.porcentaje_modulo}%` }}
+                          />
+                        </div>
+                        <span className="modulo-porcentaje">
+                          {completadas}/{total}
+                        </span>
+                        <span className="modulo-toggle">{expandido ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+
+                    {expandido && (
+                      <div className="actividades-lista">
+                        {modulo.actividades.map((act) => (
+                          <div key={act.id_actividad} className={`actividad-item estado-${act.estado}`}>
+                            <span className="actividad-icono">
+                              {act.estado === 'completada' ? '✓'
+                                : act.estado === 'en_progreso' ? '◑'
+                                : '○'}
+                            </span>
+                            <span className="actividad-nombre">{act.titulo}</span>
+                            {act.fecha_terminada && (
+                              <span className="actividad-fecha">
+                                {formatearFecha(act.fecha_terminada)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="sin-datos-progreso">El paciente aún no ha iniciado el programa</div>
+          )}
+        </div>
+
+        {/* Logros desbloqueados */}
+        <div className="seccion-logros">
+          <h2 className="seccion-titulo">Logros desbloqueados</h2>
+          {logros && logros.obtenidos > 0 ? (
+            <>
+              <p className="logros-resumen">
+                {logros.obtenidos} de {logros.total} logros obtenidos ({logros.porcentaje}%)
+              </p>
+              <div className="logros-grid">
+                {logros.logros.map((logro) => (
+                  <div key={logro.id_logro} className={`logro-badge cat-${logro.categoria.toLowerCase()}`}>
+                    <span className="logro-imagen">{logro.imagen}</span>
+                    <div className="logro-info">
+                      <span className="logro-nombre">{logro.nombre}</span>
+                      <span className="logro-categoria">{logro.categoria}</span>
+                      <span className="logro-descripcion">{logro.descripcion}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="sin-datos-progreso">El paciente aún no ha desbloqueado logros</div>
+          )}
+        </div>
+
         {/* Citas */}
         <div className="seccion-citas">
           <h2 className="seccion-titulo">Citas</h2>
-          
+
           <div className="calendario-container">
-            {/* Navegación del mes */}
             <div className="calendario-header">
               <button onClick={() => cambiarMes(-1)} className="btn-mes">←</button>
               <span className="mes-actual">{nombreMes}</span>
               <button onClick={() => cambiarMes(1)} className="btn-mes">→</button>
             </div>
 
-            {/* Días de la semana */}
             <div className="calendario-dias-semana">
               {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((dia, i) => (
                 <div key={i} className="dia-semana">{dia}</div>
               ))}
             </div>
 
-            {/* Grid del calendario */}
             <div className="calendario-grid">
               {getDiasDelMes().map((dia, index) => (
                 <div
@@ -379,8 +486,7 @@ const PacienteDetalle = () => {
               ))}
             </div>
 
-            {/* Botón Agendar */}
-            <button 
+            <button
               className="btn-agendar-cita"
               onClick={() => setShowModalCita(true)}
             >
