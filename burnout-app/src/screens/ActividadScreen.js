@@ -15,6 +15,7 @@ import {
   useWindowDimensions,
   Linking,
   Animated,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -101,6 +102,26 @@ function parsearRedireccionDiario(texto) {
   }
 }
 
+function parsearMindfulMatch(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "mindful_match") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function parsearBrujulaValores(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    if (obj?.tipo === "brujula_valores") return obj;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function parsearReescritura(texto) {
   try {
     const obj = JSON.parse(texto);
@@ -170,6 +191,25 @@ function extraerVideoId(url) {
 
 const AZUL = "#1E3A5F";
 
+// Geometría de la brújula
+const COMP_SIZE   = 270;
+const COMP_CENTER = COMP_SIZE / 2;
+const COMP_RADIUS = 88;
+const PUNTO_SIZE  = 70;
+
+const COMPASS_ANGLES = { N: -90, NE: -45, E: 0, SE: 45, S: 90, SO: 135, O: 180, NO: -135 };
+
+function posicionPunto(id) {
+  const rad = (COMPASS_ANGLES[id] * Math.PI) / 180;
+  return {
+    position: "absolute",
+    left: COMP_CENTER + COMP_RADIUS * Math.cos(rad) - PUNTO_SIZE / 2,
+    top:  COMP_CENTER + COMP_RADIUS * Math.sin(rad) - PUNTO_SIZE / 2,
+    width:  PUNTO_SIZE,
+    height: PUNTO_SIZE,
+  };
+}
+
 const TIPO_CONFIG = {
   1: { icono: "leaf",            color: "#4c956c", label: "Meditación"  },
   2: { icono: "create",          color: "#0992C2", label: "Ejercicio"   },
@@ -195,7 +235,9 @@ export default function ActividadScreen({ navigation, route }) {
   const listaReflexion   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan ? parsearListaReflexion(actividad.contenido) : null;
   const cajaHerramientas  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion ? parsearCajaHerramientas(actividad.contenido) : null;
   const redireccionDiario  = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas ? parsearRedireccionDiario(actividad.contenido) : null;
-  const reescritura        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearReescritura(actividad.contenido) : null;
+  const mindfulMatch       = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario ? parsearMindfulMatch(actividad.contenido) : null;
+  const brujulaValores     = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !mindfulMatch ? parsearBrujulaValores(actividad.contenido) : null;
+  const reescritura        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !brujulaValores ? parsearReescritura(actividad.contenido) : null;
   const respiracion        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !reescritura ? parsearRespiracion(actividad.contenido) : null;
   const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !respiracion ? parsearFormularioCampos(actividad.contenido) : null;
 
@@ -258,6 +300,116 @@ export default function ActividadScreen({ navigation, route }) {
   const numItems = listaReflexion?.num_items || 5;
   const [items, setItems] = useState(() => Array.from({ length: numItems }, () => ""));
   const listaCompleta = items.every((it) => it.trim());
+
+  // Estado Mindful Match
+  const MATCH_PARES = [
+    { pairId: 0, color: "#4A90D9", respiracion: "Inhala lentamente... toma aire por la nariz." },
+    { pairId: 1, color: "#5BAD72", respiracion: "Sostén el aire unos segundos... siente la calma." },
+    { pairId: 2, color: "#E8875A", respiracion: "Exhala con calma... suelta toda la tensión." },
+  ];
+
+  const [matchCards] = useState(() => {
+    const base = [...MATCH_PARES, ...MATCH_PARES].map((p, i) => ({ ...p, id: i }));
+    for (let i = base.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [base[i], base[j]] = [base[j], base[i]];
+    }
+    return base;
+  });
+  const [matchFlipped, setMatchFlipped]   = useState(new Set());
+  const [matchFound,   setMatchFound]     = useState(new Set());
+  const [matchLocked,  setMatchLocked]    = useState(false);
+  const [matchHint,    setMatchHint]      = useState(null);
+  const matchCompleto = matchFound.size === MATCH_PARES.length;
+
+  const handleCardTap = (card) => {
+    if (matchLocked || matchFound.has(card.pairId) || matchFlipped.has(card.id)) return;
+
+    if (matchFlipped.size === 0) {
+      setMatchFlipped(new Set([card.id]));
+    } else if (matchFlipped.size === 1) {
+      const firstId   = [...matchFlipped][0];
+      const firstCard = matchCards.find((c) => c.id === firstId);
+      setMatchFlipped(new Set([firstId, card.id]));
+      setMatchLocked(true);
+
+      if (firstCard.pairId === card.pairId) {
+        setTimeout(() => {
+          setMatchFound((prev) => new Set([...prev, card.pairId]));
+          setMatchHint(card);
+          setMatchFlipped(new Set());
+          setMatchLocked(false);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setMatchFlipped(new Set());
+          setMatchHint(null);
+          setMatchLocked(false);
+        }, 1000);
+      }
+    }
+  };
+
+  // Estado brújula de valores
+  const [brujulaPaso, setBrujulaPaso] = useState(1);
+  const [brujulaSeleccionados, setBrujulaSeleccionados] = useState(new Set());
+  const [brujulaAsignaciones, setBrujulaAsignaciones] = useState({});
+  const [brujulaModalArea, setBrujulaModalArea] = useState(null);
+
+  const minValores = brujulaValores?.min_valores || 4;
+  const minAreas   = brujulaValores?.min_areas   || 4;
+
+  const toggleBrujulaValor = (v) => {
+    setBrujulaSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) {
+        next.delete(v);
+        // limpiar asignaciones que usaban este valor
+        setBrujulaAsignaciones((a) => {
+          const clean = { ...a };
+          Object.keys(clean).forEach((k) => { if (clean[k] === v) delete clean[k]; });
+          return clean;
+        });
+      } else {
+        next.add(v);
+      }
+      return next;
+    });
+  };
+
+  const handleGuardarBrujula = async () => {
+    const areas = brujulaValores?.areas || [];
+    const contenido =
+      "Mis valores:\n" +
+      [...brujulaSeleccionados].join(", ") +
+      "\n\nMi brújula de valores:\n\n" +
+      areas
+        .filter((a) => brujulaAsignaciones[a.id])
+        .map((a) => `${a.id} · ${a.label}: ${brujulaAsignaciones[a.id]}`)
+        .join("\n");
+
+    const conectado = await estaConectado();
+    if (!conectado) {
+      await agregarCola({ type: "completar_actividad", payload: { id_actividad: actividad.id_actividad } });
+      await agregarCola({ type: "guardar_reflexion", payload: { id_actividad: actividad.id_actividad, contenido } });
+      await refrescarPendientes();
+      setCompletada(true);
+      Alert.alert("Sin conexión", "Tu brújula se guardará cuando vuelvas a conectarte.");
+      navigation.goBack();
+      return;
+    }
+    try {
+      setGuardandoReflexion(true);
+      await progresoAPI.completarActividad(actividad.id_actividad);
+      await reflexionesAPI.guardar(actividad.id_actividad, contenido);
+      setCompletada(true);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message || "No se pudo guardar");
+    } finally {
+      setGuardandoReflexion(false);
+    }
+  };
 
   // Estado reescritura
   const [reescIdx, setReescIdx] = useState(0);
@@ -1122,6 +1274,196 @@ export default function ActividadScreen({ navigation, route }) {
                   />
                 </View>
               )
+            ) : mindfulMatch ? (
+              completada ? (
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Text style={{ fontSize: 56 }}>🎉</Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      ¡Ya completaste Mindful Match!
+                    </Text>
+                    <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                      Practicaste atención plena mientras respirabas.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>🎴 Mindful Match</Text>
+                  <Text style={styles.cuestionarioInstruccion}>
+                    Encuentra los 3 pares de colores. Cada vez que encuentres uno, sigue la instrucción de respiración.
+                  </Text>
+
+                  {/* Progreso */}
+                  <View style={styles.matchProgreso}>
+                    {MATCH_PARES.map((par) => (
+                      <View
+                        key={par.pairId}
+                        style={[
+                          styles.matchProgresoCirculo,
+                          matchFound.has(par.pairId) && { backgroundColor: par.color },
+                        ]}
+                      />
+                    ))}
+                  </View>
+
+                  {/* Grid de cartas */}
+                  <View style={styles.matchGrid}>
+                    {matchCards.map((card) => {
+                      const visible = matchFlipped.has(card.id) || matchFound.has(card.pairId);
+                      const encontrada = matchFound.has(card.pairId);
+                      return (
+                        <TouchableOpacity
+                          key={card.id}
+                          style={[
+                            styles.matchCard,
+                            visible && { backgroundColor: card.color },
+                            encontrada && styles.matchCardEncontrada,
+                          ]}
+                          onPress={() => handleCardTap(card)}
+                          activeOpacity={visible ? 1 : 0.75}
+                        >
+                          {!visible && <Ionicons name="help-circle-outline" size={32} color={colors.gray} />}
+                          {encontrada && <Ionicons name="checkmark-circle" size={32} color={colors.white} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Pista de respiración */}
+                  {matchHint && !matchCompleto && (
+                    <View style={[styles.situacionCard, { borderLeftColor: matchHint.color, backgroundColor: matchHint.color + "18" }]}>
+                      <Text style={[styles.situacionLabel, { color: matchHint.color }]}>¡Par encontrado! Respira:</Text>
+                      <Text style={styles.situacionTexto}>{matchHint.respiracion}</Text>
+                    </View>
+                  )}
+
+                  {/* Completado */}
+                  {matchCompleto && (
+                    <View style={{ alignItems: "center", marginTop: spacing.md }}>
+                      <Text style={[styles.cardTitulo, { textAlign: "center" }]}>
+                        🌿 ¡Completaste el juego!
+                      </Text>
+                      <Text style={[styles.cuestionarioInstruccion, { textAlign: "center" }]}>
+                        Encontraste todos los pares practicando respiración consciente.
+                      </Text>
+                      <Button
+                        title="Marcar como completada"
+                        onPress={handleCompletar}
+                        loading={completando}
+                        style={[styles.botonCompletar, { marginTop: spacing.sm }]}
+                      />
+                    </View>
+                  )}
+                </View>
+              )
+            ) : brujulaValores ? (
+              completada ? (
+                <View style={styles.card}>
+                  <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+                    <Text style={{ fontSize: 56 }}>🧭</Text>
+                    <Text style={[styles.cardTitulo, { textAlign: "center", marginTop: spacing.md }]}>
+                      Tu brújula está guardada
+                    </Text>
+                    {reflexionExistente && (
+                      <View style={[styles.situacionCard, { marginTop: spacing.md, width: "100%" }]}>
+                        <Text style={styles.reflexionTexto}>{reflexionExistente.contenido}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : brujulaPaso === 1 ? (
+                /* ── PASO 1: SELECCIÓN DE VALORES ── */
+                <View style={styles.card}>
+                  <Text style={styles.cardTitulo}>Paso 1 · Elige tus valores</Text>
+                  <Text style={styles.cuestionarioInstruccion}>{brujulaValores.instrucciones}</Text>
+                  <Text style={styles.cajaContador}>
+                    {brujulaSeleccionados.size} seleccionados · mínimo {minValores}
+                  </Text>
+                  <View style={styles.valoresGrid}>
+                    {brujulaValores.valores.map((v) => {
+                      const activo = brujulaSeleccionados.has(v);
+                      return (
+                        <TouchableOpacity
+                          key={v}
+                          style={[styles.valorChip, activo && styles.valorChipActivo]}
+                          onPress={() => toggleBrujulaValor(v)}
+                        >
+                          <Text style={[styles.valorChipTexto, activo && { color: colors.white }]}>{v}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <Button
+                    title="Continuar →"
+                    onPress={() => setBrujulaPaso(2)}
+                    style={[styles.botonCompletar, { opacity: brujulaSeleccionados.size >= minValores ? 1 : 0.4 }]}
+                    disabled={brujulaSeleccionados.size < minValores}
+                  />
+                </View>
+              ) : (
+                /* ── PASO 2: BRÚJULA ── */
+                <View style={styles.card}>
+                  <View style={styles.pasosHeader}>
+                    <TouchableOpacity onPress={() => setBrujulaPaso(1)}>
+                      <Ionicons name="arrow-back" size={20} color={AZUL} />
+                    </TouchableOpacity>
+                    <Text style={[styles.cardTitulo, { marginBottom: 0, marginLeft: spacing.sm }]}>
+                      Paso 2 · Tu brújula
+                    </Text>
+                  </View>
+                  <Text style={[styles.cuestionarioInstruccion, { marginTop: spacing.sm }]}>
+                    Toca cada área para asignarle uno de tus valores.
+                  </Text>
+                  <Text style={styles.cajaContador}>
+                    {Object.keys(brujulaAsignaciones).length} de 8 áreas asignadas · mínimo {minAreas}
+                  </Text>
+
+                  {/* Brújula */}
+                  <View style={styles.compassContainer}>
+                    {/* Centro */}
+                    <View style={styles.compassCenter}>
+                      <Ionicons name="compass" size={26} color={AZUL} />
+                    </View>
+
+                    {/* Puntos */}
+                    {brujulaValores.areas.map((area) => {
+                      const pos = posicionPunto(area.id);
+                      const valorAsignado = brujulaAsignaciones[area.id];
+                      return (
+                        <TouchableOpacity
+                          key={area.id}
+                          style={[styles.compassPunto, pos, valorAsignado && styles.compassPuntoActivo]}
+                          onPress={() => setBrujulaModalArea(area)}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.compassDireccion, valorAsignado && { color: "rgba(255,255,255,0.7)" }]}>
+                            {area.id}
+                          </Text>
+                          <Text style={[styles.compassAreaLabel, valorAsignado && { color: colors.white }]} numberOfLines={1}>
+                            {area.label}
+                          </Text>
+                          {valorAsignado ? (
+                            <Text style={styles.compassValorAsignado} numberOfLines={2}>
+                              {valorAsignado}
+                            </Text>
+                          ) : (
+                            <Ionicons name="add-circle-outline" size={14} color={colors.gray} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Button
+                    title="Guardar mi brújula"
+                    onPress={handleGuardarBrujula}
+                    loading={guardandoReflexion}
+                    style={[styles.botonCompletar, { opacity: Object.keys(brujulaAsignaciones).length >= minAreas ? 1 : 0.4 }]}
+                    disabled={Object.keys(brujulaAsignaciones).length < minAreas}
+                  />
+                </View>
+              )
             ) : reescritura ? (
               completada ? (
                 <View style={styles.card}>
@@ -1368,7 +1710,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Reflexión existente (si ya completó antes) */}
-            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
+            {reflexionExistente && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && !brujulaValores && !mindfulMatch && (
               <View style={styles.card}>
                 <View style={styles.reflexionHeader}>
                   <Text style={styles.cardTitulo}>Mi reflexión</Text>
@@ -1381,7 +1723,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Input de reflexión (al completar o editar) */}
-            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
+            {mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && !brujulaValores && !mindfulMatch && (
               <View style={styles.card}>
                 <Text style={styles.cardTitulo}>
                   {reflexionExistente ? "Editar reflexión" : "¿Qué aprendiste?"}
@@ -1421,7 +1763,7 @@ export default function ActividadScreen({ navigation, route }) {
             )}
 
             {/* Botón completar */}
-            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && (
+            {!completada && !mostrarReflexion && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !formularioCampos && !respiracion && !reescritura && !brujulaValores && !mindfulMatch && (
               <Button
                 title="Marcar como completada"
                 onPress={handleCompletar}
@@ -1434,6 +1776,59 @@ export default function ActividadScreen({ navigation, route }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* Modal asignación de valores a área de brújula */}
+      <Modal
+        visible={!!brujulaModalArea}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBrujulaModalArea(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setBrujulaModalArea(null)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitulo}>{brujulaModalArea?.label}</Text>
+            <Text style={styles.modalSubtitulo}>¿Qué valor guía esta área?</Text>
+            <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+              {[...brujulaSeleccionados].map((valor) => {
+                const esActual = brujulaAsignaciones[brujulaModalArea?.id] === valor;
+                return (
+                  <TouchableOpacity
+                    key={valor}
+                    style={[styles.modalOpcion, esActual && styles.modalOpcionActiva]}
+                    onPress={() => {
+                      setBrujulaAsignaciones((prev) => ({ ...prev, [brujulaModalArea.id]: valor }));
+                      setBrujulaModalArea(null);
+                    }}
+                  >
+                    <Text style={[styles.modalOpcionTexto, esActual && { color: colors.white }]}>
+                      {valor}
+                    </Text>
+                    {esActual && <Ionicons name="checkmark" size={16} color={colors.white} />}
+                  </TouchableOpacity>
+                );
+              })}
+              {brujulaAsignaciones[brujulaModalArea?.id] && (
+                <TouchableOpacity
+                  style={styles.modalQuitar}
+                  onPress={() => {
+                    setBrujulaAsignaciones((prev) => {
+                      const next = { ...prev };
+                      delete next[brujulaModalArea.id];
+                      return next;
+                    });
+                    setBrujulaModalArea(null);
+                  }}
+                >
+                  <Text style={styles.modalQuitarTexto}>Quitar valor</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1836,6 +2231,179 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
+  },
+  // Mindful Match
+  matchProgreso: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  matchProgresoCirculo: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.grayLight,
+    borderWidth: 1.5,
+    borderColor: colors.grayLight,
+  },
+  matchGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    justifyContent: "center",
+    marginBottom: spacing.lg,
+  },
+  matchCard: {
+    width: "28%",
+    aspectRatio: 1,
+    borderRadius: borderRadius.lg,
+    backgroundColor: "#E8EDF5",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  matchCardEncontrada: {
+    opacity: 0.85,
+  },
+  // Brújula de valores
+  valoresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  valorChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: colors.grayLight,
+    backgroundColor: "#F0F4FF",
+  },
+  valorChipActivo: {
+    backgroundColor: AZUL,
+    borderColor: AZUL,
+  },
+  valorChipTexto: {
+    fontSize: fonts.sizes.sm,
+    color: AZUL,
+    fontWeight: "600",
+  },
+  pasosHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  compassContainer: {
+    width: COMP_SIZE,
+    height: COMP_SIZE,
+    alignSelf: "center",
+    marginVertical: spacing.md,
+  },
+  compassCenter: {
+    position: "absolute",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#F0F4FF",
+    borderWidth: 2,
+    borderColor: AZUL,
+    justifyContent: "center",
+    alignItems: "center",
+    left: COMP_CENTER - 26,
+    top: COMP_CENTER - 26,
+    zIndex: 10,
+  },
+  compassPunto: {
+    borderRadius: borderRadius.md,
+    backgroundColor: "#F0F4FF",
+    borderWidth: 1.5,
+    borderColor: colors.grayLight,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 4,
+  },
+  compassPuntoActivo: {
+    backgroundColor: AZUL,
+    borderColor: AZUL,
+  },
+  compassDireccion: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: colors.textSecondary,
+  },
+  compassAreaLabel: {
+    fontSize: 9,
+    color: colors.text,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  compassValorAsignado: {
+    fontSize: 8,
+    color: colors.white,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: "100%",
+    maxWidth: 340,
+  },
+  modalTitulo: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: "bold",
+    color: AZUL,
+    marginBottom: 4,
+  },
+  modalSubtitulo: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  modalOpcion: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.grayLight,
+    marginBottom: spacing.xs,
+  },
+  modalOpcionActiva: {
+    backgroundColor: AZUL,
+    borderColor: AZUL,
+  },
+  modalOpcionTexto: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    fontWeight: "500",
+  },
+  modalQuitar: {
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  modalQuitarTexto: {
+    fontSize: fonts.sizes.sm,
+    color: "#E8875A",
+    fontWeight: "600",
   },
   reescPensamientoCard: {
     backgroundColor: "#FFF3EE",
