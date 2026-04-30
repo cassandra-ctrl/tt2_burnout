@@ -192,5 +192,15 @@
   }
 }
 
+.link-descarga-app {
+  color: #1E3A5F;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s;
+}
 
+.link-descarga-app:hover {
+  color: #2E5A8F;
+}
 

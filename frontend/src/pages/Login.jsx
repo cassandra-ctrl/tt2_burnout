@@ -65,7 +65,7 @@ const Login = () => {
       
       <div className="login-simple-content">
         <div className="login-simple-header">
-          <h1>Bienvenido!</h1>
+          <h1>¡Bienvenido a CalmOut!</h1>
           <p>Portal Web - Psicólogos y Administradores</p>
         </div>
 
@@ -122,7 +122,15 @@ const Login = () => {
 
         <div className="login-footer-simple">
           <p className="info-pacientes">
-            ¿Eres paciente? Descarga la aplicación móvil
+            ¿Eres paciente?{' '}
+            <a
+              href="https://expo.dev/accounts/urielrdzg/projects/burnout-app/builds/7059f20a-ec0d-4e1b-abbe-c3184539676f"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-descarga-app"
+            >
+              Descarga la aplicación móvil
+            </a>
           </p>
         </div>
       </div>

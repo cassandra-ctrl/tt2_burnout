@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // URL base de tu API - Cambia esto según tu configuración
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://calmout.com.mx/api';
 
 // Crear instancia de axios con configuración base
 const api = axios.create({
