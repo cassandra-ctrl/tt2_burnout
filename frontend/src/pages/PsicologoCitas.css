@@ -235,3 +235,79 @@
     font-size: 24px;
   }
 }
+
+.filtros-citas {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.filtro-busqueda {
+  flex: 1;
+  min-width: 220px;
+}
+
+.filtro-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: border-color 0.2s;
+}
+
+.filtro-input:focus {
+  outline: none;
+  border-color: #1E3A5F;
+}
+
+.filtro-select {
+  padding: 10px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  min-width: 140px;
+  transition: border-color 0.2s;
+}
+
+.filtro-select:focus {
+  outline: none;
+  border-color: #1E3A5F;
+}
+
+.btn-limpiar-filtros {
+  padding: 10px 18px;
+  border: 1px solid #1E3A5F;
+  background: white;
+  color: #1E3A5F;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-limpiar-filtros:hover {
+  background: #1E3A5F;
+  color: white;
+}
+
+.filtro-input,
+.filtro-select {
+  color: #1F2937 !important;
+}
+
+.filtro-input::placeholder {
+  color: #9CA3AF;
+  opacity: 1;
+}
+
+.filtro-select option {
+  color: #1F2937;
+  background: white;
+}

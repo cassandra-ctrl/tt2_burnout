@@ -358,10 +358,6 @@ const PacienteDetalle = () => {
               </span>
             </div>
 
-            <button className="btn-mensaje" disabled>
-              Enviar Mensaje
-            </button>
-
             <div className="detalle-datos">
               {/* <div className="dato-item">
                 <span className="dato-label">Fecha de nacimiento:</span>

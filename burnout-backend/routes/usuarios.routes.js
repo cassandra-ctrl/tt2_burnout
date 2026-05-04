@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const { body, validationResult } = require("express-validator");
 const { db } = require("../config/database");
 const authenticate = require("../middleware/auth.middleware");
+const ExcelJS = require("exceljs");
 
 //GET /api/usuarios
 
@@ -511,6 +512,141 @@ router.delete("/:id", authenticate.admin, async (req, res) => {
     console.error("Error eliminando usuario:", error);
     res.status(500).json({
       error: "Error eliminando usuario",
+      message: error.message,
+    });
+  }
+});
+
+
+
+// GET /api/usuarios/exportar/pacientes-excel
+// Descarga la base de datos de pacientes en formato Excel (RF20)
+router.get("/exportar/pacientes-excel", authenticate.admin, async (req, res) => {
+  try {
+    // Query con todos los datos requeridos por el RF20
+    const pacientes = await db.query(`
+      SELECT
+        p.id_paciente,
+        p.matricula,
+        u.nombre,
+        u.paterno,
+        u.materno,
+        u.correo,
+        u.created_at,
+        u.activo,
+        p.ultimo_dia_actividad,
+        p.racha_maxima,
+        e.estado AS estado_tratamiento
+      FROM paciente p
+      INNER JOIN usuario u ON p.id_usuario = u.id_usuario
+      LEFT JOIN expediente e ON p.id_paciente = e.id_paciente
+      ORDER BY p.id_paciente ASC
+    `);
+
+    // Crear el workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "BurnOut App - Sistema Administrativo";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Pacientes");
+
+    // Definir columnas con anchos
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 8 },
+      { header: "Boleta", key: "boleta", width: 14 },
+      { header: "Nombre completo", key: "nombre", width: 35 },
+      { header: "Correo", key: "correo", width: 30 },
+      { header: "Fecha de registro", key: "fecha_registro", width: 18 },
+      { header: "Estado del tratamiento", key: "estado_tratamiento", width: 22 },
+      { header: "Ultima actividad", key: "ultima_actividad", width: 18 },
+      { header: "Racha maxima (dias)", key: "racha_maxima", width: 20 },
+      { header: "Estado", key: "estado", width: 12 },
+    ];
+
+    // Estilo del header (fondo azul, texto blanco)
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A5F" },
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.height = 24;
+
+    // Agregar filas de datos
+    pacientes.forEach((p) => {
+      const nombreCompleto = [p.nombre, p.paterno, p.materno]
+        .filter(Boolean)
+        .join(" ");
+
+      const fechaRegistro = p.created_at
+        ? new Date(p.created_at).toLocaleDateString("es-MX", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })
+        : "";
+
+      const ultimaActividad = p.ultimo_dia_actividad
+        ? new Date(p.ultimo_dia_actividad).toLocaleDateString("es-MX", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })
+        : "Sin actividad";
+
+      worksheet.addRow({
+        id: p.id_paciente,
+        boleta: p.matricula,
+        nombre: nombreCompleto,
+        correo: p.correo,
+        fecha_registro: fechaRegistro,
+        estado_tratamiento: p.estado_tratamiento || "Sin expediente",
+        ultima_actividad: ultimaActividad,
+        racha_maxima: p.racha_maxima || 0,
+        estado: p.activo ? "Activo" : "Inactivo",
+      });
+    });
+
+    // Aplicar bordes a todas las celdas con datos
+    const filasConDatos = pacientes.length + 1;
+    for (let row = 1; row <= filasConDatos; row++) {
+      for (let col = 1; col <= 9; col++) {
+        const cell = worksheet.getCell(row, col);
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD1D5DB" } },
+          bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
+          left: { style: "thin", color: { argb: "FFD1D5DB" } },
+          right: { style: "thin", color: { argb: "FFD1D5DB" } },
+        };
+      }
+    }
+
+    // Generar nombre del archivo con la fecha actual
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, "0");
+    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+    const anio = hoy.getFullYear();
+    const filename = `Pacientes_${dia}-${mes}-${anio}.xlsx`;
+
+    // Configurar respuesta como descarga
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
+
+    // Escribir el archivo a la respuesta
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exportando pacientes a Excel:", error);
+    res.status(500).json({
+      error: "Error generando el archivo Excel",
       message: error.message,
     });
   }

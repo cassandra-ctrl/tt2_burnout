@@ -12,10 +12,12 @@ const PsicologoCitas = () => {
   const [loading, setLoading] = useState(true);
   const [semanaActual, setSemanaActual] = useState(new Date());
   const [showModalCita, setShowModalCita] = useState(false);
+  const [filtroEstado, setFiltroEstado] = useState('programada');
+  const [busquedaPaciente, setBusquedaPaciente] = useState('');
 
   useEffect(() => {
     cargarCitas();
-  }, [semanaActual]);
+  }, [semanaActual, filtroEstado]);
 
   const cargarCitas = async () => {
     try {
@@ -27,11 +29,11 @@ const PsicologoCitas = () => {
       const desde = inicioSemana.toISOString().split('T')[0];
       const hasta = finSemana.toISOString().split('T')[0];
       
-      const data = await citasService.getCitas({
-        estado: 'programada',
-        desde,
-        hasta,
-      });
+      const params = { desde, hasta };
+      if (filtroEstado !== 'todas') {
+        params.estado = filtroEstado;
+      }
+      const data = await citasService.getCitas(params);
       
       setCitas(data.citas || []);
     } catch (error) {
@@ -70,10 +72,21 @@ const PsicologoCitas = () => {
 
   const getCitasDelDia = (fecha) => {
     const fechaStr = fecha.toISOString().split('T')[0];
+    const busquedaLower = busquedaPaciente.toLowerCase().trim();
     return citas.filter(cita => {
       const fechaCita = cita.fecha_cita.split('T')[0];
-      return fechaCita === fechaStr;
+      if (fechaCita !== fechaStr) return false;
+      if (busquedaLower) {
+        const nombrePaciente = (cita.paciente_nombre || '').toLowerCase();
+        if (!nombrePaciente.includes(busquedaLower)) return false;
+      }
+      return true;
     });
+  };
+
+  const limpiarFiltros = () => {
+    setFiltroEstado('programada');
+    setBusquedaPaciente('');
   };
 
   const cambiarSemana = (direccion) => {
@@ -129,6 +142,32 @@ const PsicologoCitas = () => {
       <div className="psicologo-citas">
         <div className="citas-header-top">
           <h1 className="citas-titulo">Mis citas</h1>
+
+          <div className="filtros-citas">
+            <div className="filtro-busqueda">
+              <input
+                type="text"
+                placeholder="🔍 Buscar paciente..."
+                value={busquedaPaciente}
+                onChange={(e) => setBusquedaPaciente(e.target.value)}
+                className="filtro-input"
+              />
+            </div>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="filtro-select"
+            >
+              <option value="todas">Todas</option>
+              <option value="programada">Programada</option>
+              <option value="completada">Completada</option>
+              <option value="cancelada">Cancelada</option>
+              <option value="no_asistio">No asistió</option>
+            </select>
+            <button onClick={limpiarFiltros} className="btn-limpiar-filtros">
+              Limpiar
+            </button>
+          </div>
           
           <div className="citas-controles">
             <div className="fecha-navegacion">

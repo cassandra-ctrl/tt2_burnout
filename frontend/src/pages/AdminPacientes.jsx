@@ -17,6 +17,7 @@ const AdminPacientes = () => {
   // Estado para el modal de confirmación
   const [showModal, setShowModal] = useState(false);
   const [pacienteToDelete, setPacienteToDelete] = useState(null);
+  const [descargandoExcel, setDescargandoExcel] = useState(false);
   
   // Estado para el modal de éxito
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -45,6 +46,19 @@ const AdminPacientes = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     cargarPacientes(searchTerm);
+  };
+
+  const handleDescargarExcel = async () => {
+    try {
+      setDescargandoExcel(true);
+      await usuariosService.exportarPacientesExcel();
+      setSuccessMessage('Excel descargado exitosamente');
+      setShowSuccessModal(true);
+    } catch (err) {
+      setError(err.error || 'Error al descargar el archivo');
+    } finally {
+      setDescargandoExcel(false);
+    }
   };
 
   const handleEdit = (id) => {
@@ -91,6 +105,13 @@ const AdminPacientes = () => {
             onClick={() => navigate('/admin/pacientes/agregar')}
           >
             Agregar
+          </button>
+          <button
+            className="btn-descargar-excel"
+            onClick={handleDescargarExcel}
+            disabled={descargandoExcel}
+          >
+            {descargandoExcel ? 'Descargando...' : '⬇ Descargar Excel'}
           </button>
           
           <form onSubmit={handleSearch} className="search-form">

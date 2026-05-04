@@ -60,6 +60,35 @@ const usuariosService = {
       throw error.response?.data || { error: 'Error eliminando usuario' };
     }
   },
+  // Descargar Excel con todos los pacientes (RF20)
+  exportarPacientesExcel: async () => {
+    try {
+      const response = await api.get('/usuarios/exportar/pacientes-excel', {
+        responseType: 'blob',
+      });
+      // Crear URL temporal y disparar descarga
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      // Generar nombre con fecha actual
+      const hoy = new Date();
+      const dia = String(hoy.getDate()).padStart(2, '0');
+      const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+      const anio = hoy.getFullYear();
+      link.download = `Pacientes_${dia}-${mes}-${anio}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { success: true };
+    } catch (error) {
+      throw error.response?.data || { error: 'Error descargando Excel' };
+    }
+  },
+
 };
 
 export default usuariosService;
