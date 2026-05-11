@@ -22,6 +22,7 @@ const AdminPacientes = () => {
   // Estado para el modal de éxito
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [successTitle, setSuccessTitle] = useState('¡Éxito!');
 
   useEffect(() => {
     cargarPacientes();
@@ -52,6 +53,7 @@ const AdminPacientes = () => {
     try {
       setDescargandoExcel(true);
       await usuariosService.exportarPacientesExcel();
+      setSuccessTitle('¡Descarga exitosa!');
       setSuccessMessage('Excel descargado exitosamente');
       setShowSuccessModal(true);
     } catch (err) {
@@ -73,6 +75,7 @@ const AdminPacientes = () => {
   const confirmDelete = async () => {
     try {
       await usuariosService.eliminarUsuario(pacienteToDelete.id);
+      setSuccessTitle('¡Eliminado!');
       setSuccessMessage(`El paciente ${pacienteToDelete.nombre} ha sido eliminado exitosamente.`);
       setShowSuccessModal(true);
       cargarPacientes(searchTerm); // Recargar lista
@@ -210,7 +213,7 @@ const AdminPacientes = () => {
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="¡Eliminado!"
+        title={successTitle}
         message={successMessage}
         type="success"
       />

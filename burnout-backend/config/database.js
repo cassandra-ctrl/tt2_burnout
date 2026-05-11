@@ -20,6 +20,8 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   //El envio de paquetes inicia al abrir la conexion
   keepAliveInitialDelay: 0,
+  //Charset para soportar emojis (4 bytes)
+  charset: 'utf8mb4',
 });
 
 //creamos una promesa para usar async/await

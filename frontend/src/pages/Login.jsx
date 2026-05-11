@@ -144,7 +144,7 @@ const Login = () => {
           <p className="info-pacientes">
             ¿Eres paciente?{' '}
             <a
-              href="https://expo.dev/accounts/urielrdzg/projects/burnout-app/builds/7059f20a-ec0d-4e1b-abbe-c3184539676f"
+              href="https://expo.dev/accounts/urielrdzg/projects/burnout-app/builds/90633ef9-f7c1-4918-acd9-bf9b40fbaad3"
               target="_blank"
               rel="noopener noreferrer"
               className="link-descarga-app"

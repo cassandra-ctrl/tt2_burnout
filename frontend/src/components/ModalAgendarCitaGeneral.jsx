@@ -40,7 +40,7 @@ const ModalAgendarCitaGeneral = ({ isOpen, onClose, onCitaCreada }) => {
       setFormData({
         id_paciente: '',
         fecha_cita: '',
-        hora_cita: '',
+        hora_cita: '10:00',
         id_categoria: '',
         observaciones: '',
       });
@@ -126,52 +126,41 @@ const ModalAgendarCitaGeneral = ({ isOpen, onClose, onCitaCreada }) => {
   // Funciones de hora
   const incrementarHora = () => {
     setHora(prev => prev >= 12 ? 1 : prev + 1);
-    actualizarHoraFormato();
   };
 
   const decrementarHora = () => {
     setHora(prev => prev <= 1 ? 12 : prev - 1);
-    actualizarHoraFormato();
   };
 
   const incrementarMinuto = () => {
     setMinuto(prev => prev >= 59 ? 0 : prev + 1);
-    actualizarHoraFormato();
   };
 
   const decrementarMinuto = () => {
     setMinuto(prev => prev <= 0 ? 59 : prev - 1);
-    actualizarHoraFormato();
   };
 
   const cambiarPeriodo = (nuevoPeriodo) => {
     setPeriodo(nuevoPeriodo);
-    actualizarHoraFormato();
   };
 
-  const actualizarHoraFormato = () => {
-    setTimeout(() => {
-      let hora24 = hora;
-      
-      if (periodo === 'PM' && hora !== 12) {
-        hora24 = hora + 12;
-      } else if (periodo === 'AM' && hora === 12) {
-        hora24 = 0;
-      }
-      
-      const horaStr = String(hora24).padStart(2, '0');
-      const minutoStr = String(minuto).padStart(2, '0');
-      const horaFormateada = `${horaStr}:${minutoStr}`;
-      
-      setFormData(prev => ({
-        ...prev,
-        hora_cita: horaFormateada
-      }));
-    }, 0);
-  };
+  // (funcion actualizarHoraFormato eliminada - ahora la logica esta en el useEffect de abajo)
 
+  // Sincroniza hora_cita con los selectores cada vez que cambian
   useEffect(() => {
-    actualizarHoraFormato();
+    let hora24 = hora;
+    if (periodo === 'PM' && hora !== 12) {
+      hora24 = hora + 12;
+    } else if (periodo === 'AM' && hora === 12) {
+      hora24 = 0;
+    }
+    const horaStr = String(hora24).padStart(2, '0');
+    const minutoStr = String(minuto).padStart(2, '0');
+    const horaFormateada = `${horaStr}:${minutoStr}`;
+    setFormData(prev => ({
+      ...prev,
+      hora_cita: horaFormateada
+    }));
   }, [hora, minuto, periodo]);
 
   const handleChange = (e) => {

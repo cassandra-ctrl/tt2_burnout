@@ -236,3 +236,22 @@
 .input-group-simple input[name="contrasena"] {
   padding-right: 40px;
 }
+
+/* Hacer los textos mas legibles en pantallas pequenas (moviles) */
+@media (max-width: 768px) {
+  .recuperar-link-simple a,
+  .info-pacientes,
+  .link-descarga-app {
+    color: #E8F0FE !important;
+  }
+
+  .recuperar-link-simple a:hover,
+  .link-descarga-app:hover {
+    color: #FFFFFF !important;
+    text-decoration: underline;
+  }
+
+  .info-pacientes {
+    font-weight: 500;
+  }
+}
