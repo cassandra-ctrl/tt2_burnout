@@ -71,7 +71,7 @@ const Login = () => {
         </div>
 
         <div className="panda-image-container">
-          <div className="panda-emoji">🐼</div>
+          <img src="/images/panda-meditando.png" alt="BurnOut" className="panda-image" />
         </div>
 
           {error && (
@@ -144,7 +144,7 @@ const Login = () => {
           <p className="info-pacientes">
             ¿Eres paciente?{' '}
             <a
-              href="https://expo.dev/accounts/urielrdzg/projects/burnout-app/builds/90633ef9-f7c1-4918-acd9-bf9b40fbaad3"
+              href="https://drive.google.com/uc?export=download&id=1UjSOcURs4seOs3dVHP721W0_2heXT-V1"
               target="_blank"
               rel="noopener noreferrer"
               className="link-descarga-app"

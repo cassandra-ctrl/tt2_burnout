@@ -67,16 +67,15 @@
   align-items: center;
 }
 
-/* Emoji temporal */
-.panda-emoji {
-  font-size: 120px;
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
-}
 
 /* Cuando uses una imagen real */
 .panda-image {
-  max-width: 180px;
-  height: auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: rgba(184, 193, 236, 0.25);
+  border: 4px solid rgba(255, 255, 255, 0.15);
   filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
 }
 
@@ -182,8 +181,8 @@
     font-size: 36px;
   }
 
-  .panda-emoji {
-    font-size: 100px;
+  .panda-image {
+    max-width: 140px;
   }
 
   .wave-top-simple,
