@@ -73,7 +73,7 @@ export default function RegisterScreen({ navigation }) {
       !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*?])/.test(contrasena)
     ) {
       nuevosErrores.contrasena =
-        "Debe incluir al menos unas mayúscula, una minúscula, un número y un símbolo";
+        "Debe incluir al menos unas mayúscula, una minúscula, un número y un símbolo (!@#$%^&*?)s";
     }
 
     // Validar confirmar contraseña

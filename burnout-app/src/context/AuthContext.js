@@ -23,8 +23,19 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [onboardingCompletado, setOnboardingCompletado] = useState(false);
 
+  // Helper: consultar el estado del onboarding desde la BD
+  const consultarOnboarding = async () => {
+    try {
+      const estado = await testAPI.getEstado();
+      return estado?.prueba_inicial?.completada === true;
+    } catch (err) {
+      console.log("Error consultando estado de onboarding:", err);
+      return false;
+    }
+  };
+
   // -------------------------------------------------------------------------
-  // Verificar sesión al iniciar la app
+  // Verificar sesion al iniciar la app
   // -------------------------------------------------------------------------
   useEffect(() => {
     verificarSesion();
@@ -35,35 +46,33 @@ export function AuthProvider({ children }) {
       const token = await AsyncStorage.getItem("token");
 
       if (token) {
-        // Verificar que el token siga válido
         try {
           const data = await authAPI.getProfile();
           const user = data.usuario || data.user;
+
+          // IMPORTANTE: consultar onboarding ANTES de setUsuario
+          // Asi cuando el navigator se monte, ya tendra el valor correcto
+          const completado = await consultarOnboarding();
+          setOnboardingCompletado(completado);
           setUsuario(user);
-          // Verificar en BD si ya completó el test inicial
-          try {
-            const estado = await testAPI.getEstado();
-            setOnboardingCompletado(estado?.prueba_inicial?.completada === true);
-          } catch (_) {
-            setOnboardingCompletado(false);
-          }
         } catch (err) {
-          // Token inválido o expirado
           await AsyncStorage.removeItem("token");
           await AsyncStorage.removeItem("usuario");
           setUsuario(null);
+          setOnboardingCompletado(false);
         }
       }
     } catch (err) {
-      console.log("Error verificando sesión:", err);
+      console.log("Error verificando sesion:", err);
       setUsuario(null);
+      setOnboardingCompletado(false);
     } finally {
       setCargandoInicial(false);
     }
   };
 
   // -------------------------------------------------------------------------
-  // Iniciar sesión
+  // Iniciar sesion
   // -------------------------------------------------------------------------
   const login = async (correo, contrasena) => {
     try {
@@ -72,12 +81,16 @@ export function AuthProvider({ children }) {
 
       const data = await authAPI.login(correo, contrasena);
       const user = data.usuario || data.user;
+
+      // IMPORTANTE: consultar onboarding ANTES de setUsuario
+      // Asi cuando el navigator se monte, ya tendra el valor correcto
+      const completado = await consultarOnboarding();
+      setOnboardingCompletado(completado);
       setUsuario(user);
 
       return { success: true, data };
     } catch (err) {
       setError(err.message);
-      // Si el backend indica que el correo no está verificado
       if (err.data?.requiresVerification) {
         return {
           success: false,
@@ -101,13 +114,10 @@ export function AuthProvider({ children }) {
       setCargando(true);
 
       const data = await authAPI.register(datos);
-
-      // No logueamos al usuario todavía — debe verificar su correo primero
       return { success: true, requiresVerification: true, correo: data.correo };
     } catch (err) {
       const mensajeError =
         err.message || "Error inesperado al registrar la cuenta.";
-
       setError(mensajeError);
       return { success: false, error: mensajeError };
     } finally {
@@ -115,21 +125,23 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Completar login después de verificar correo
+  // Completar login despues de verificar correo
+  // Cuenta recien verificada -> nunca ha hecho el test -> mostrar onboarding
   const loginConDatos = (user) => {
+    setOnboardingCompletado(false);
     setUsuario(user);
   };
 
-
   // -------------------------------------------------------------------------
-  // Cerrar sesión
+  // Cerrar sesion
   // -------------------------------------------------------------------------
   const logout = async () => {
     try {
       await authAPI.logout();
+      setOnboardingCompletado(false);
       setUsuario(null);
     } catch (err) {
-      console.error("Error al cerrar sesión:", err);
+      console.error("Error al cerrar sesion:", err);
     }
   };
 
@@ -147,16 +159,15 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // -------------------------------------------------------------------------
-  // Limpiar error
-  // -------------------------------------------------------------------------
+  // Marcar onboarding como completado (despues de hacer el test inicial)
+  const marcarOnboardingCompletado = () => {
+    setOnboardingCompletado(true);
+  };
+
   const limpiarError = () => {
     setError(null);
   };
 
-  // -------------------------------------------------------------------------
-  // Valores del contexto
-  // -------------------------------------------------------------------------
   const value = {
     usuario,
     cargando,
@@ -169,6 +180,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     actualizarUsuario,
+    marcarOnboardingCompletado,
     limpiarError,
   };
 

@@ -11,7 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 //
 // Para cambiar la IP local edita .env.local
 // Para apuntar a Azure edita .env.production
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.70:3000/api";
+const API_URL = "https://calmout.com.mx/api";
 
 // ============================================================================
 // FUNCIÓN BASE PARA PETICIONES
