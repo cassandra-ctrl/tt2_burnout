@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { logrosAPI } from "../services/api";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
+import { Mascota } from "../components";
 
 const AZUL = "#1E3A5F";
 
@@ -81,6 +82,20 @@ export default function LogrosScreen({ navigation }) {
     cargarLogros();
   };
 
+  // Tipo de mascota segun el progreso de logros
+  const porcentajeLogros = datos?.porcentaje || 0;
+  const obtenidos = datos?.obtenidos || 0;
+
+  const tipoMascota = obtenidos === 0 ? "motivador" : "celebrando";
+  const mensajeMotivacional = (() => {
+    if (porcentajeLogros === 100) return "¡Eres una inspiración! Has completado todos los logros.";
+    if (porcentajeLogros >= 75) return "¡Estás cerca de la meta! Sigue así.";
+    if (porcentajeLogros >= 50) return "¡Vas excelente! Más de la mitad recorrida.";
+    if (porcentajeLogros >= 25) return "¡Buen progreso! Cada logro cuenta.";
+    if (obtenidos > 0) return "¡Tu primer logro es solo el comienzo!";
+    return "Tu primer logro está más cerca de lo que crees.";
+  })();
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -104,14 +119,23 @@ export default function LogrosScreen({ navigation }) {
         >
           <View style={styles.contenido}>
 
-            {/* Banner de progreso */}
+            {/* Banner de progreso con mascota */}
             {datos && (
               <View style={styles.progresoBanner}>
-                <Text style={styles.progresoNumero}>
-                  {datos.obtenidos}
-                  <Text style={styles.progresoTotal}>/{datos.total}</Text>
-                </Text>
-                <Text style={styles.progresoLabel}>logros desbloqueados</Text>
+                <View style={styles.progresoFila}>
+                  <Mascota tipo={tipoMascota} tamano="sm" />
+                  <View style={styles.progresoInfo}>
+                    <Text style={styles.progresoNumero}>
+                      {datos.obtenidos}
+                      <Text style={styles.progresoTotal}>/{datos.total}</Text>
+                    </Text>
+                    <Text style={styles.progresoLabel}>logros desbloqueados</Text>
+                  </View>
+                </View>
+
+                {/* Mensaje motivacional */}
+                <Text style={styles.mensajeMotivacional}>{mensajeMotivacional}</Text>
+
                 {/* Barra de progreso */}
                 <View style={styles.barraFondo}>
                   <View style={[styles.barraRelleno, { width: `${datos.porcentaje}%` }]} />
@@ -191,18 +215,36 @@ const styles = StyleSheet.create({
   contenido: { padding: spacing.lg },
   centrado: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  // Banner progreso
+// Banner progreso
   progresoBanner: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    alignItems: "center",
+    alignItems: "stretch",
     marginBottom: spacing.md,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+  },
+  progresoFila: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  progresoInfo: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  mensajeMotivacional: {
+    fontSize: fonts.sizes.sm,
+    color: colors.text,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginBottom: spacing.sm,
+    lineHeight: 20,
   },
   progresoNumero: {
     fontSize: 48,

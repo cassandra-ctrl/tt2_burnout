@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button } from "../components";
+import { Button, Mascota } from "../components";
 import { colors, fonts, spacing } from "../utils/theme";
 
 export default function ResultadoTestScreen({ navigation, route }) {
@@ -28,6 +28,16 @@ export default function ResultadoTestScreen({ navigation, route }) {
       case "medio": return "Área de atención";
       case "alto":  return "Requiere cuidado";
       default:      return nivel?.toUpperCase() || "---";
+    }
+  };
+
+  // Tipo de mascota segun el nivel de burnout
+  const getTipoMascota = (nivel) => {
+    switch (nivel?.toLowerCase()) {
+      case "bajo":  return "celebrando";  // ¡Vas bien!
+      case "medio": return "motivador";    // Vamos juntos
+      case "alto":  return "empatico";     // No estas solo
+      default:      return "saludando";
     }
   };
 
@@ -63,9 +73,13 @@ export default function ResultadoTestScreen({ navigation, route }) {
 
       {/* Contenido */}
       <View style={styles.contenido}>
-        {/* Imagen */}
-        <View style={styles.imagenContainer}>
-          <Text style={styles.emoji}>📊</Text>
+
+        {/* Mascota segun el nivel */}
+        <View style={styles.mascotaContainer}>
+          <Mascota
+            tipo={getTipoMascota(resultado?.nivel_burnout)}
+            tamano="lg"
+          />
         </View>
 
         {/* Nivel de burnout */}
@@ -152,22 +166,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     alignItems: "center",
   },
-  imagenContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
+  mascotaContainer: {
     marginBottom: spacing.lg,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  emoji: {
-    fontSize: 50,
+    alignItems: "center",
   },
   nivelContainer: {
     width: "80%",

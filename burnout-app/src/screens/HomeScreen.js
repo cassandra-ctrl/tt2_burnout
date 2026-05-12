@@ -14,10 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { progresoAPI, logrosAPI, modulosAPI, testAPI } from "../services/api";
-import { Loading } from "../components";
+import { Loading, MascotaConMensaje } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
 import { guardarCache, leerCache } from "../utils/offline";
 import OfflineBanner from "../components/OfflineBanner";
+import { getMensajePorHora, getMensajeAleatorio } from "../utils/mensajes-mascota";
 
 const AZUL = "#1E3A5F";
 
@@ -102,6 +103,23 @@ export default function HomeScreen({ navigation }) {
   const porcentajeTotal = progreso?.progreso_general?.porcentaje_completado || 0;
   const rachaActual = progreso?.paciente?.racha_actual || 0;
 
+  // Determinar tipo de mascota y mensaje segun contexto
+  const datosMascota = (() => {
+    if (porcentajeTotal >= 100) {
+      return { tipo: "celebrando", mensaje: getMensajeAleatorio("celebrando") };
+    }
+    if (rachaActual >= 3) {
+      return {
+        tipo: "celebrando",
+        mensaje: `¡Llevas ${rachaActual} días seguidos! Tu constancia es admirable.`,
+      };
+    }
+    if (rachaActual === 0 && porcentajeTotal > 0) {
+      return { tipo: "motivador", mensaje: getMensajeAleatorio("motivador") };
+    }
+    return getMensajePorHora();
+  })();
+
   if (cargando) {
     return <Loading message="Cargando..." />;
   }
@@ -131,6 +149,16 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         <View style={styles.contenido}>
+          
+          {/* MASCOTA CON SALUDO */}
+          <View style={styles.mascotaCard}>
+            <MascotaConMensaje
+              tipo={datosMascota.tipo}
+              mensaje={datosMascota.mensaje}
+              tamano="sm"
+              direccion="horizontal"
+            />
+          </View>
 
           {/* RACHA Y PROGRESO */}
           <View style={styles.card}>
@@ -269,6 +297,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  mascotaCard: {
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   header: {
     backgroundColor: AZUL,

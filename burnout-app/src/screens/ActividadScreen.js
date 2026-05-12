@@ -21,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import YoutubePlayer from "react-native-youtube-iframe";
 import { progresoAPI, reflexionesAPI } from "../services/api";
-import { Button } from "../components";
+import { Button, MascotaConMensaje } from "../components";
 import { colors, fonts, spacing, borderRadius } from "../utils/theme";
 import { useNetwork } from "../context/NetworkContext";
 import { agregarCola, estaConectado } from "../utils/offline";
@@ -241,7 +241,51 @@ export default function ActividadScreen({ navigation, route }) {
   const respiracion        = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !reescritura ? parsearRespiracion(actividad.contenido) : null;
   const formularioCampos   = !videoId && !esLectura && !cuestionario && !distorsiones && !journaling && !formularioPlan && !listaReflexion && !cajaHerramientas && !redireccionDiario && !respiracion ? parsearFormularioCampos(actividad.contenido) : null;
 
+  // Determinar tipo de mascota y mensaje segun la actividad
+  const getMascotaActividad = () => {
+    // Si esta completada, panda celebrando
+    if (yaCompletada) {
+      return {
+        tipo: "celebrando",
+        mensaje: "¡Ya completaste esta actividad! Puedes revisarla cuando quieras.",
+      };
+    }
+    // Por tipo de contenido
+    if (respiracion) {
+      return {
+        tipo: "meditando",
+        mensaje: "Respira profundo. Concédete este momento.",
+      };
+    }
+    if (cuestionario || distorsiones || journaling || listaReflexion || reescritura) {
+      return {
+        tipo: "pensando",
+        mensaje: "Tómate tu tiempo. No hay respuestas correctas, solo las tuyas.",
+      };
+    }
+    if (videoId || esLectura) {
+      return {
+        tipo: "estudiando",
+        mensaje: "Aprender sobre ti mismo es un gran regalo.",
+      };
+    }
+    if (formularioPlan || formularioCampos || cajaHerramientas || mindfulMatch || brujulaValores) {
+      return {
+        tipo: "motivador",
+        mensaje: "¡Vamos! Este ejercicio vale la pena.",
+      };
+    }
+    // Default
+    return {
+      tipo: "motivador",
+      mensaje: "Cada actividad te acerca a sentirte mejor.",
+    };
+  };
+
+  const mascotaActividad = getMascotaActividad();
+
   // Estado del cuestionario de síntomas
+
   const [respuestas, setRespuestas] = useState({});
   const [mostrarResultados, setMostrarResultados] = useState(false);
 
@@ -808,6 +852,16 @@ export default function ActividadScreen({ navigation, route }) {
           </View>
 
           <View style={styles.contenido}>
+            {/* Mascota con mensaje contextual */}
+            <View style={styles.mascotaContenedor}>
+              <MascotaConMensaje
+                tipo={mascotaActividad.tipo}
+                mensaje={mascotaActividad.mensaje}
+                tamano="sm"
+                direccion="horizontal"
+              />
+            </View>
+
             {/* Chips de tipo y duración */}
             <View style={styles.chipsRow}>
               <View style={[styles.chip, { backgroundColor: tipo.color + "20" }]}>
@@ -1861,6 +1915,12 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   contenido: { padding: spacing.lg },
+  mascotaContenedor: {
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -4,14 +4,17 @@
 // ============================================================================
 
 import React from "react";
-import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-import { Button } from "../components";
-import { colors, fonts, spacing } from "../utils/theme";
+import { Button, Mascota } from "../components";
+import { colors, fonts, spacing, borderRadius } from "../utils/theme";
 
 export default function EmpecemosScreen({ navigation }) {
-  const { actualizarUsuario } = useAuth();
+  const { usuario, actualizarUsuario } = useAuth();
+
+  // Primer nombre del usuario (si tiene varios)
+  const primerNombre = usuario?.nombre?.split(" ")[0] || "";
 
   // ---------------------------------------------------------------------------
   // Comenzar - Ir al Home
@@ -43,27 +46,50 @@ export default function EmpecemosScreen({ navigation }) {
           <Text style={styles.titulo}>¡Empecemos!</Text>
         </View>
 
-        {/* Contenido */}
+        {/* Contenido principal */}
         <View style={styles.contenido}>
-          {/* Imagen del panda - usar emoji si no hay imagen */}
-          <View style={styles.imagenContainer}>
-            <Text style={styles.emoji}>🐼</Text>
+          {/* Mascota saludando */}
+          <View style={styles.mascotaContainer}>
+            <Mascota tipo="saludando" tamano="xl" />
           </View>
 
-          {/* Recursos */}
-          <View style={styles.recursosContainer}>
-            <Text style={styles.recursosTitulo}>Recursos de{"\n"}lectura</Text>
-          </View>
-
-          {/* Mensaje */}
-          <Text style={styles.mensaje}>
-            Estás listo para iniciar. Da clic en Comenzar y empieza el proceso.
+          {/* Saludo personalizado */}
+          <Text style={styles.saludo}>
+            {primerNombre ? `¡Hola, ${primerNombre}!` : "¡Hola!"}
           </Text>
 
-          {/* Tarjeta de diario */}
-          <View style={styles.tarjetaDiario}>
-            <Text style={styles.diarioTitulo}>Diario de gratitud</Text>
+          {/* Mensaje de bienvenida */}
+          <Text style={styles.mensajeBienvenida}>
+            Estoy aquí para acompañarte en este camino. Vamos juntos, paso a paso.
+          </Text>
+
+          {/* Tarjeta con qué hacer ahora */}
+          <View style={styles.tarjetaInfo}>
+            <Text style={styles.tarjetaTitulo}>¿Qué sigue?</Text>
+            <View style={styles.pasoItem}>
+              <Text style={styles.pasoNumero}>1</Text>
+              <Text style={styles.pasoTexto}>
+                Explora los módulos del programa
+              </Text>
+            </View>
+            <View style={styles.pasoItem}>
+              <Text style={styles.pasoNumero}>2</Text>
+              <Text style={styles.pasoTexto}>
+                Completa actividades a tu ritmo
+              </Text>
+            </View>
+            <View style={styles.pasoItem}>
+              <Text style={styles.pasoNumero}>3</Text>
+              <Text style={styles.pasoTexto}>
+                Refleja en tu diario cuando lo necesites
+              </Text>
+            </View>
           </View>
+
+          {/* Mensaje final */}
+          <Text style={styles.mensajeFinal}>
+            ¿Listo para empezar?
+          </Text>
         </View>
 
         {/* Botón comenzar */}
@@ -110,65 +136,73 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     alignItems: "center",
   },
-  imagenContainer: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: colors.white,
-    justifyContent: "center",
+  mascotaContainer: {
+    marginBottom: spacing.lg,
     alignItems: "center",
+  },
+  saludo: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+  mensajeBienvenida: {
+    fontSize: fonts.sizes.md,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  tarjetaInfo: {
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    width: "100%",
     marginBottom: spacing.lg,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 3,
   },
-  emoji: {
-    fontSize: 80,
-  },
-  recursosContainer: {
-    position: "absolute",
-    top: 100,
-    right: spacing.lg,
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: 12,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recursosTitulo: {
-    fontSize: fonts.sizes.sm,
-    fontWeight: "600",
+  tarjetaTitulo: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: "bold",
     color: colors.text,
+    marginBottom: spacing.md,
     textAlign: "center",
   },
-  mensaje: {
-    fontSize: fonts.sizes.md,
-    color: colors.text,
-    textAlign: "center",
-    marginVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  tarjetaDiario: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderRadius: 12,
-    width: "80%",
+  pasoItem: {
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: spacing.md,
+    gap: spacing.md,
   },
-  diarioTitulo: {
+  pasoNumero: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#1E3A5F",
+    color: colors.white,
+    fontSize: fonts.sizes.md,
+    fontWeight: "bold",
+    textAlign: "center",
+    lineHeight: 32,
+  },
+  pasoTexto: {
+    flex: 1,
+    fontSize: fonts.sizes.md,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  mensajeFinal: {
     fontSize: fonts.sizes.md,
     fontWeight: "600",
     color: colors.text,
+    textAlign: "center",
+    marginBottom: spacing.md,
   },
   footer: {
     paddingHorizontal: spacing.lg,
