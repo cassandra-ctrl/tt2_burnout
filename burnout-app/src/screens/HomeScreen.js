@@ -54,7 +54,6 @@ export default function HomeScreen({ navigation }) {
 
       // Verificar si el programa está completo y falta el test final
       if (!yaVerificoFinalRef.current) {
-        yaVerificoFinalRef.current = true;
         const porcentaje = progresoData?.progreso_general?.porcentaje_completado || 0;
         if (porcentaje >= 100) {
           try {
@@ -62,6 +61,7 @@ export default function HomeScreen({ navigation }) {
             if (!estadoTest?.prueba_final?.completada) {
               setTestFinalPendiente(true);
             }
+            yaVerificoFinalRef.current = true;
           } catch (_) {}
         }
       }

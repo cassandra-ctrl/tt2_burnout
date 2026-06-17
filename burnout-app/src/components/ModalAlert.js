@@ -26,6 +26,9 @@ export default function ModalAlert({
   tipo = "warning",
   textoBoton = "Entendido",
   onConfirm,
+  // NUEVOS: boton de accion adicional (opcional)
+  textoBotonAccion,
+  onBotonAccion,
 }) {
   const config = {
     success: { icon: "checkmark-circle", color: "#4CAF50", bgColor: "#E8F5E9" },
@@ -41,6 +44,13 @@ export default function ModalAlert({
     onClose();
   };
 
+  const handleAccion = () => {
+    if (onBotonAccion) onBotonAccion();
+  };
+
+  // Si hay boton de accion, mostramos DOS botones
+  const tieneBotonAccion = textoBotonAccion && onBotonAccion;
+
   const contenidoModal = (
     <View style={styles.overlay}>
       <View style={styles.modalContainer}>
@@ -49,25 +59,43 @@ export default function ModalAlert({
         </View>
         <Text style={styles.titulo}>{titulo}</Text>
         <Text style={styles.mensaje}>{mensaje}</Text>
-        <TouchableOpacity
-          style={[styles.boton, { backgroundColor: color }]}
-          onPress={handleConfirm}
-        >
-          <Text style={styles.botonTexto}>{textoBoton}</Text>
-        </TouchableOpacity>
+
+        {tieneBotonAccion ? (
+          // Dos botones: cerrar (secundario) + accion (principal)
+          <View style={styles.botonesRow}>
+            <TouchableOpacity
+              style={[styles.botonSecundario]}
+              onPress={handleConfirm}
+            >
+              <Text style={styles.botonSecundarioTexto}>Cerrar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.botonAccion, { backgroundColor: color }]}
+              onPress={handleAccion}
+            >
+              <Text style={styles.botonTexto}>{textoBotonAccion}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // Un solo boton (comportamiento original)
+          <TouchableOpacity
+            style={[styles.boton, { backgroundColor: color }]}
+            onPress={handleConfirm}
+          >
+            <Text style={styles.botonTexto}>{textoBoton}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 
   // 1. COMPORTAMIENTO PARA LA WEB
   if (Platform.OS === "web") {
-    // En la web sí podemos destruir el componente si no está visible
     if (!visible) return null;
     return contenidoModal;
   }
 
-  // 2. COMPORTAMIENTO PARA MÓVIL (Android/iOS)
-  // ¡Aquí NUNCA retornamos null! Dejamos que la propiedad nativa "visible" haga su trabajo.
+  // 2. COMPORTAMIENTO PARA MOVIL (Android/iOS)
   return (
     <Modal
       visible={visible}
@@ -90,7 +118,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
-    // Truco para Web
     ...(Platform.OS === "web" && {
       position: "fixed",
       top: 0,
@@ -137,6 +164,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.xl,
   },
+  // Boton unico (modo original)
   boton: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl * 2,
@@ -146,5 +174,31 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: fonts.sizes.md,
     fontWeight: "600",
+  },
+  // Modo con dos botones
+  botonesRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  botonSecundario: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: colors.gray,
+    backgroundColor: colors.white,
+  },
+  botonSecundarioTexto: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.md,
+    fontWeight: "600",
+  },
+  botonAccion: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 25,
   },
 });

@@ -60,6 +60,21 @@ export default function LoginScreen({ navigation }) {
     const resultado = await login(correo, contrasena);
 
     if (!resultado.success) {
+      // CASO ESPECIAL: correo no verificado
+      if (resultado.requiresVerification) {
+        setModalConfig({
+          titulo: "Correo no verificado",
+          mensaje:
+            "Tu cuenta existe pero aún no has verificado tu correo electrónico. Te llevaremos a la pantalla de verificación.",
+          tipo: "warning",
+          mostrarBotonVerificar: true,
+          correoVerificar: resultado.correo || correo,
+        });
+        setModalVisible(true);
+        return;
+      }
+
+      // Error normal
       setModalConfig({
         titulo: "Error de inicio de sesión",
         mensaje: resultado.error || "Correo o contraseña incorrectos",
@@ -68,6 +83,13 @@ export default function LoginScreen({ navigation }) {
       setModalVisible(true);
     }
     // Si es exitoso, el AuthContext redirigirá automáticamente
+  };
+
+  // Navegar a la pantalla de verificacion
+  const irAVerificar = () => {
+    const correoDestino = modalConfig.correoVerificar || correo;
+    setModalVisible(false);
+    navigation.navigate("VerificacionCorreo", { correo: correoDestino });
   };
 
   return (
@@ -133,6 +155,22 @@ export default function LoginScreen({ navigation }) {
               loading={cargando}
               style={styles.loginButton}
             />
+
+            {/* Link: Necesito verificar mi correo */}
+            <TouchableOpacity
+              onPress={() => {
+                if (!correo.trim() || !/\S+@\S+\.\S+/.test(correo)) {
+                  setErrores({ correo: "Ingresa tu correo arriba para continuar" });
+                  return;
+                }
+                navigation.navigate("VerificacionCorreo", { correo });
+              }}
+              style={styles.verificarLink}
+            >
+              <Text style={styles.verificarLinkText}>
+                ¿Necesitas verificar tu correo?
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Registro */}
@@ -150,6 +188,8 @@ export default function LoginScreen({ navigation }) {
         titulo={modalConfig.titulo}
         mensaje={modalConfig.mensaje}
         tipo={modalConfig.tipo}
+        textoBotonAccion={modalConfig.mostrarBotonVerificar ? "Verificar ahora" : undefined}
+        onBotonAccion={modalConfig.mostrarBotonVerificar ? irAVerificar : undefined}
       />
     </SafeAreaView>
   );
@@ -202,6 +242,16 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: spacing.sm,
+  },
+  verificarLink: {
+    alignSelf: "center",
+    marginTop: spacing.md,
+    padding: spacing.sm,
+  },
+  verificarLinkText: {
+    color: colors.primary,
+    fontSize: fonts.sizes.sm,
+    textDecorationLine: "underline",
   },
   footer: {
     flexDirection: "row",
