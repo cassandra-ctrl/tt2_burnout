@@ -144,7 +144,7 @@ const Login = () => {
           <p className="info-pacientes">
             ¿Eres paciente?{' '}
             <a
-              href="https://drive.google.com/uc?export=download&id=1UjSOcURs4seOs3dVHP721W0_2heXT-V1"
+              href="https://calmout.com.mx/downloads/burnout-app.apk"
               target="_blank"
               rel="noopener noreferrer"
               className="link-descarga-app"

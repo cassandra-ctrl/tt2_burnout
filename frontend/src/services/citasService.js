@@ -66,7 +66,7 @@ const citasService = {
   // Cancelar cita
   cancelarCita: async (id) => {
     try {
-      const response = await api.patch(`/citas/${id}/cancelar`);
+      const response = await api.put(`/citas/${id}/cancelar`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Error cancelando cita' };

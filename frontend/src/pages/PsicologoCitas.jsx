@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ModalAgendarCitaGeneral from '../components/ModalAgendarCitaGeneral';
+import ModalDetalleCita from '../components/ModalDetalleCita';
 import citasService from '../services/citasService';
 import './PsicologoCitas.css';
 
@@ -14,6 +15,8 @@ const PsicologoCitas = () => {
   const [showModalCita, setShowModalCita] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('programada');
   const [busquedaPaciente, setBusquedaPaciente] = useState('');
+  const [citaSeleccionada, setCitaSeleccionada] = useState(null);
+  const [showModalDetalle, setShowModalDetalle] = useState(false);
 
   useEffect(() => {
     cargarCitas();
@@ -232,7 +235,7 @@ const PsicologoCitas = () => {
                             ...estilo,
                             backgroundColor: color,
                           }}
-                          onClick={() => navigate(`/psicologo/pacientes/${cita.id_paciente}`)}
+                          onClick={() => { setCitaSeleccionada(cita); setShowModalDetalle(true); }}
                         >
                           <div className="cita-bloque-contenido">
                             <div className="cita-nombre">
@@ -251,6 +254,13 @@ const PsicologoCitas = () => {
             </div>
           </div>
         </div>
+
+        <ModalDetalleCita
+          isOpen={showModalDetalle}
+          onClose={() => setShowModalDetalle(false)}
+          cita={citaSeleccionada}
+          onCitaActualizada={cargarCitas}
+        />
 
         <ModalAgendarCitaGeneral
           isOpen={showModalCita}
