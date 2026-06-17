@@ -677,7 +677,7 @@ router.put("/:id/cancelar", authenticate.psicologo, async (req, res) => {
       });
     }
 
-    if (cita.estado !== "Programada") {
+    if (cita.estado !== "programada") {
       return res.status(400).json({
         error: "No se pueden cancelar citas pasadas",
         message: "Solo se pueden cancelar citas programadas",

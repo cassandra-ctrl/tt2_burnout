@@ -266,7 +266,7 @@ router.post(
 router.post(
   "/verificar-correo",
   [
-    body("correo").isEmail().normalizeEmail().withMessage("Correo inválido"),
+    body("correo").isEmail().withMessage("Correo inválido"),
     body("codigo")
       .isLength({ min: 6, max: 6 })
       .isNumeric()
@@ -350,7 +350,7 @@ router.post(
 //Reenvía el código de verificación de correo
 router.post(
   "/reenviar-verificacion",
-  [body("correo").isEmail().normalizeEmail().withMessage("Correo inválido")],
+  [body("correo").isEmail().withMessage("Correo inválido")],
   async (req, res) => {
     try {
       const { correo } = req.body;
